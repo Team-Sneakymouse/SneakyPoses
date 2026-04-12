@@ -252,7 +252,6 @@ object PacketManager {
     fun spawnSitVehicle(location: Location, player: Player): Entity {
         val armorStand = location.world.spawn(location, org.bukkit.entity.ArmorStand::class.java) {
             it.isInvisible = true
-            it.isMarker = true // No hitbox, client-side only practically
             it.isInvulnerable = true
             it.isSilent = true
             it.setGravity(false)

@@ -58,6 +58,8 @@ class PoseListener : Listener {
     private fun cleanupPose(player: Player) {
         val pose = PoseManager.removePose(player) ?: return
         
+        player.isInvisible = false
+
         // Eject player before removing entities
         player.leaveVehicle()
 

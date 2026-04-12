@@ -25,12 +25,6 @@ class SleepCommand : CommandBase("sleep") {
 
         val yOffset = SneakyPoses.instance.config.getDouble("sleep.y-offset", -0.1)
         
-        // Find the ground block (first solid block underneath)
-        var ground = location.block.getRelative(BlockFace.DOWN)
-        while (ground.y > ground.world.minHeight && !ground.type.isSolid) {
-            ground = ground.getRelative(BlockFace.DOWN)
-        }
-        
         // GSit Strategy: Metadata points to fake bed at minHeight
         val bedLoc = location.clone()
         bedLoc.y = location.world.minHeight.toDouble()
@@ -55,11 +49,11 @@ class SleepCommand : CommandBase("sleep") {
         bedData.facing = face
         bedData.part = Bed.Part.HEAD
 
-        // Teleport player to ground + yOffset at the center of the block
+        // Teleport player to exact Y + offset, but centered on the block
         val playerLoc = location.clone()
         playerLoc.x = location.blockX + 0.5
         playerLoc.z = location.blockZ + 0.5
-        playerLoc.y = ground.y + 1.0 + yOffset
+        playerLoc.y += yOffset
         target.teleport(playerLoc)
 
         // NPC Location (Rotated 180)
@@ -75,8 +69,10 @@ class SleepCommand : CommandBase("sleep") {
         // Hide the real player
         target.isInvisible = true
         
-        // Use a seat for stability (no shake)
-        val vehicle = PacketManager.spawnSitVehicle(playerLoc, target)
+        // Lower the player's camera perspective by spawning the seat 1 block down
+        val vehicleLoc = playerLoc.clone()
+        vehicleLoc.y -= 1.0
+        val vehicle = PacketManager.spawnSitVehicle(vehicleLoc, target)
         vehicle.addPassenger(target)
 
         // Record pose
