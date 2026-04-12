@@ -55,18 +55,16 @@ class SleepCommand : CommandBase("sleep") {
         bedData.facing = face
         bedData.part = Bed.Part.HEAD
 
-        // Teleport player to ground + yOffset (Keep original yaw)
+        // Teleport player to ground + yOffset at the center of the block
         val playerLoc = location.clone()
+        playerLoc.x = location.blockX + 0.5
+        playerLoc.z = location.blockZ + 0.5
         playerLoc.y = ground.y + 1.0 + yOffset
         target.teleport(playerLoc)
 
-        // NPC Location (Rotated 180 and shifted to center waist)
+        // NPC Location (Rotated 180)
         val npcLoc = playerLoc.clone()
         npcLoc.yaw = rotatedYaw
-        
-        // Offset NPC by ~0.5 blocks in its facing direction to center waist
-        val radians = Math.toRadians(rotatedYaw.toDouble())
-        npcLoc.add(-Math.sin(radians) * 0.5, 0.0, Math.cos(radians) * 0.5)
 
         // Send bed block (fake) at world bottom
         PacketManager.sendBlockChange(target, bedLoc, bedData)
@@ -74,8 +72,11 @@ class SleepCommand : CommandBase("sleep") {
         // Create ghost NPC
         val npcData = PacketManager.spawnSleepNPC(target, npcLoc) ?: return true
         
+        // Hide the real player
+        target.isInvisible = true
+        
         // Use a seat for stability (no shake)
-        val vehicle = PacketManager.spawnSitVehicle(location, target)
+        val vehicle = PacketManager.spawnSitVehicle(playerLoc, target)
         vehicle.addPassenger(target)
 
         // Record pose
