@@ -320,9 +320,18 @@ object PacketManager {
     /**
      * Broadcasts a head rotation update for the NPC.
      */
-    fun updateNPCHeadRotation(player: Player, npcEntity: Any) {
+    fun updateNPCHeadRotation(player: Player, npcEntity: Any, baseYaw: Float) {
         try {
-            val fixedYaw = (player.location.yaw * 256.0f / 360.0f).toInt().toByte()
+            val flippedBaseYaw = baseYaw + 180f
+            var diff = (player.location.yaw - flippedBaseYaw) % 360f
+            if (diff < -180f) diff += 360f
+            if (diff > 180f) diff -= 360f
+
+            if (diff > 45f) diff = 45f
+            if (diff < -45f) diff = -45f
+
+            val finalHeadYaw = flippedBaseYaw + diff
+            val fixedYaw = (finalHeadYaw * 256.0f / 360.0f).toInt().toByte()
             val entityClass = Class.forName("net.minecraft.world.entity.Entity")
             val packetClass = Class.forName("net.minecraft.network.protocol.game.ClientboundRotateHeadPacket")
             val packet = packetClass.getConstructor(entityClass, Byte::class.java).newInstance(npcEntity, fixedYaw)

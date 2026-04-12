@@ -9,5 +9,5 @@ website: https://rawb.tv
 dependencies:
   server:
     PlaceholderAPI:
-      load: OPTIONAL
+      load: BEFORE
       required: false
