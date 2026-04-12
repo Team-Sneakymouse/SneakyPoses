@@ -58,21 +58,23 @@ class PoseListener : Listener {
     private fun cleanupPose(player: Player) {
         val pose = PoseManager.removePose(player) ?: return
         
+        // Eject player before removing entities
+        player.leaveVehicle()
+
         // Remove entities
         pose.entityUuids.forEach { uuid ->
             Bukkit.getEntity(uuid)?.remove()
         }
         
-        // Clean up blocks
+        // Clean up blocks (for player)
         pose.blocks.forEach { loc ->
             PacketManager.clearBlockChange(player, loc)
         }
         
-        // If it was sleep, remove NPC
+        // If it was sleep, remove NPC and clear bed for all viewers
         if (pose.type == PoseType.SLEEP && pose.npcId != null && pose.npcUuid != null) {
-            PacketManager.removeSleepNPC(player, pose.npcId, pose.npcUuid)
+            val bedLoc = pose.blocks.firstOrNull() // The bed we tracked
+            PacketManager.removeSleepNPC(player, pose.npcId, pose.npcUuid, bedLoc)
         }
-        
-        // player.sendMessage("Pose cancelled.") // User might want this removed too if success messages were removed
     }
 }

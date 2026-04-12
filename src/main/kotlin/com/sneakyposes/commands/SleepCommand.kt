@@ -55,7 +55,7 @@ class SleepCommand : CommandBase("sleep") {
         PacketManager.sendBlockChange(target, bedLoc, bedData)
 
         // Create ghost NPC
-        val npcData = PacketManager.spawnSleepNPC(target, location) ?: return true
+        val npcData = PacketManager.spawnSleepNPC(target, sleepTargetLoc) ?: return true
         
         // Use a seat for stability (no shake)
         val vehicle = PacketManager.spawnSitVehicle(location, target)
@@ -66,6 +66,7 @@ class SleepCommand : CommandBase("sleep") {
             type = PoseType.SLEEP,
             location = location,
             entityUuids = setOf(vehicle.uniqueId), // Track the seat
+            blocks = setOf(bedLoc), // Track the fake bed
             npcId = npcData.first,
             npcUuid = npcData.second
         ))
