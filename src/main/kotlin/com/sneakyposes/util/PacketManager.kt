@@ -38,7 +38,25 @@ object PacketManager {
             // Create GameProfile
             val gameProfileClass = Class.forName("com.mojang.authlib.GameProfile")
             val npcUuid = UUID.randomUUID()
-            val gameProfile = gameProfileClass.getConstructor(UUID::class.java, String::class.java).newInstance(npcUuid, "SleepNPC")
+            
+            var profileName = com.sneakyposes.SneakyPoses.instance.config.getString("sleep.npc-name", "[playerName]")!!
+            profileName = profileName.replace("[playerName]", player.name)
+            
+            if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+                try {
+                    val papiClass = Class.forName("me.clip.placeholderapi.PlaceholderAPI")
+                    val setPlaceholdersMethod = papiClass.getMethod("setPlaceholders", org.bukkit.OfflinePlayer::class.java, String::class.java)
+                    profileName = setPlaceholdersMethod.invoke(null, player as org.bukkit.OfflinePlayer, profileName) as String
+                } catch (e: Exception) {
+                    // Ignore PAPI reflection errors
+                }
+            }
+            
+            if (profileName.length > 16) {
+                profileName = profileName.substring(0, 16)
+            }
+            
+            val gameProfile = gameProfileClass.getConstructor(UUID::class.java, String::class.java).newInstance(npcUuid, profileName)
             
             // Copy properties (skin)
             val getProfileMethod = entityPlayer.javaClass.getMethod("getGameProfile")

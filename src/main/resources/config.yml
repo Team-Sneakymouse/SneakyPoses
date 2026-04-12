@@ -2,3 +2,4 @@ sit:
   y-offset: 0.1
 sleep:
   y-offset: 0.1
+  npc-name: "[playerName]"

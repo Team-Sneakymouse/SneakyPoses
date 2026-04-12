@@ -5,3 +5,9 @@ description: A Minecraft Paper plugin designed to control player poses.
 api-version: '1.21'
 authors: [Team Sneakymouse]
 website: https://rawb.tv
+
+dependencies:
+  server:
+    PlaceholderAPI:
+      load: OPTIONAL
+      required: false
