@@ -250,15 +250,15 @@ object PacketManager {
      * Spawns an invisible vehicle for sitting.
      */
     fun spawnSitVehicle(location: Location, player: Player): Entity {
-        val armorStand = location.world.spawn(location, org.bukkit.entity.ArmorStand::class.java) {
-            it.isInvisible = true
+        val display = location.world.spawn(location, org.bukkit.entity.BlockDisplay::class.java) {
             it.isInvulnerable = true
             it.isSilent = true
             it.setGravity(false)
             it.velocity = org.bukkit.util.Vector(0, 0, 0)
             it.setRotation(player.location.yaw, 0f)
+            it.addScoreboardTag("SneakyPosesSeat")
         }
-        return armorStand
+        return display
     }
 
     /**

@@ -41,18 +41,16 @@ class SneakyPoses : JavaPlugin() {
         // Register listener
         server.pluginManager.registerEvents(PoseListener(), this)
 
-        // Pose sync task
-        server.scheduler.runTaskTimer(this, Runnable {
-            for (player in server.onlinePlayers) {
-                val pose = PoseManager.getPose(player) ?: continue
-                when (pose.type) {
-                    PoseType.SIT -> {
-                        player.teleport(pose.location.clone().apply { yaw = player.location.yaw })
-                    }
-                    else -> {}
+        // Clean up stranded seats from crashes or improper unloads
+        for (world in server.worlds) {
+            for (entity in world.entities) {
+                if (entity.scoreboardTags.contains("SneakyPosesSeat")) {
+                    entity.remove()
                 }
             }
-        }, 0L, 1L)
+        }
+
+
 
         logger.info("SneakyPoses plugin has been enabled!")
     }
