@@ -2,6 +2,7 @@ package com.sneakyposes
 
 import com.sneakyposes.commands.SitCommand
 import com.sneakyposes.commands.CrawlCommand
+import com.sneakyposes.commands.PoseCommand
 import com.sneakyposes.commands.SleepCommand
 import com.sneakyposes.listeners.PoseListener
 import com.sneakyposes.util.PoseManager
@@ -35,6 +36,7 @@ class SneakyPoses : JavaPlugin() {
         commandMap.register("sneakyposes", SitCommand())
         commandMap.register("sneakyposes", CrawlCommand())
         commandMap.register("sneakyposes", SleepCommand())
+        commandMap.register("sneakyposes", PoseCommand())
 
         // Register listener
         server.pluginManager.registerEvents(PoseListener(), this)
