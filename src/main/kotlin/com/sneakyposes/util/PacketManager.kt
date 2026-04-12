@@ -24,14 +24,9 @@ object PacketManager {
      * Spawns a fake player NPC for sleeping.
      * Returns the pair of (entityId, UUID) for the NPC.
      */
-    fun spawnSleepNPC(player: Player, location: Location): Pair<Int, UUID>? {
+    fun spawnSleepNPC(player: Player, bedLocation: Location): Triple<Int, UUID, Any>? {
         try {
-            val craftServerClass = Class.forName("${Bukkit.getServer().javaClass.packageName}.CraftServer")
-            val minecraftServer = craftServerClass.getMethod("getServer").invoke(Bukkit.getServer())
-            
-            val craftWorldClass = Class.forName("${Bukkit.getServer().javaClass.packageName}.CraftWorld")
-            val serverLevel = craftWorldClass.getMethod("getHandle").invoke(location.world)
-            
+            // Get NMS Player
             val craftPlayerClass = Class.forName("${Bukkit.getServer().javaClass.packageName}.entity.CraftPlayer")
             val entityPlayer = craftPlayerClass.getMethod("getHandle").invoke(player)
             
@@ -60,12 +55,20 @@ object PacketManager {
             
             // Copy properties (skin)
             val getProfileMethod = entityPlayer.javaClass.getMethod("getGameProfile")
-            val getPropertiesMethod = gameProfileClass.getMethod("getProperties")
-            val npcProperties = getPropertiesMethod.invoke(gameProfile) 
-            val playerProperties = getPropertiesMethod.invoke(getProfileMethod.invoke(entityPlayer))
-            npcProperties.javaClass.getMethod("putAll", Class.forName("com.google.common.collect.Multimap")).invoke(npcProperties, playerProperties)
+            val originalProfile = getProfileMethod.invoke(entityPlayer)
+            val getPropertiesMethod = originalProfile.javaClass.getMethod("getProperties")
+            val originalProperties = getPropertiesMethod.invoke(originalProfile) as com.google.common.collect.Multimap<String, Any>
+            
+            val newProperties = getPropertiesMethod.invoke(gameProfile) as com.google.common.collect.Multimap<String, Any>
+            newProperties.putAll(originalProperties)
 
-            // Get ClientInformation
+            // Get Server elements
+            val craftServerClass = Class.forName("${Bukkit.getServer().javaClass.packageName}.CraftServer")
+            val minecraftServer = craftServerClass.getMethod("getServer").invoke(Bukkit.getServer())
+
+            val craftWorldClass = Class.forName("${Bukkit.getServer().javaClass.packageName}.CraftWorld")
+            val serverLevel = craftWorldClass.getMethod("getHandle").invoke(bedLocation.world)
+
             val clientInfoMethod = entityPlayer.javaClass.getMethod("clientInformation")
             val clientInfo = clientInfoMethod.invoke(entityPlayer)
 
@@ -79,7 +82,7 @@ object PacketManager {
             ).newInstance(minecraftServer, serverLevel, gameProfile, clientInfo)
 
             // Set Pose & Location
-            val spawnLoc = location.clone().add(0.0, 0.15, 0.0)
+            val spawnLoc = bedLocation.clone().add(0.0, 0.15, 0.0)
             val entityClass = Class.forName("net.minecraft.world.entity.Entity")
             val moveToMethod = entityClass.getMethod("moveTo", Double::class.java, Double::class.java, Double::class.java, Float::class.java, Float::class.java)
             moveToMethod.invoke(npcPlayer, spawnLoc.x, spawnLoc.y, spawnLoc.z, spawnLoc.yaw, 0f)
@@ -90,10 +93,10 @@ object PacketManager {
             serverPlayerClass.getMethod("setPose", poseClass).invoke(npcPlayer, sleepingPose)
 
             // Broadcast sequence
-            broadcastPlayerNPCPackets(player, npcPlayer, location.clone(), npcUuid)
+            broadcastPlayerNPCPackets(player, npcPlayer, bedLocation.clone(), npcUuid)
 
             Bukkit.getLogger().info("[SneakyPoses] NPC created for ${player.name}")
-            return Pair(npcPlayer.javaClass.getMethod("getId").invoke(npcPlayer) as Int, npcUuid)
+            return Triple(npcPlayer.javaClass.getMethod("getId").invoke(npcPlayer) as Int, npcUuid, npcPlayer)
         } catch (e: Exception) {
             Bukkit.getLogger().severe("[SneakyPoses] Failed to spawn NPC for ${player.name}: ${e.message}")
             e.printStackTrace()
@@ -311,6 +314,31 @@ object PacketManager {
             }
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    /**
+     * Broadcasts a head rotation update for the NPC.
+     */
+    fun updateNPCHeadRotation(player: Player, npcEntity: Any) {
+        try {
+            val fixedYaw = (player.location.yaw * 256.0f / 360.0f).toInt().toByte()
+            val entityClass = Class.forName("net.minecraft.world.entity.Entity")
+            val packetClass = Class.forName("net.minecraft.network.protocol.game.ClientboundRotateHeadPacket")
+            val packet = packetClass.getConstructor(entityClass, Byte::class.java).newInstance(npcEntity, fixedYaw)
+
+            val craftPlayerClass = Class.forName("${Bukkit.getServer().javaClass.packageName}.entity.CraftPlayer")
+
+            player.world.players.forEach { viewer ->
+                if (viewer.location.distanceSquared(player.location) < 9000.0) {
+                    val viewerHandle = craftPlayerClass.getMethod("getHandle").invoke(viewer)
+                    val connection = viewerHandle.javaClass.getField("connection").get(viewerHandle)
+                    val sendMethod = connection.javaClass.getMethod("send", Class.forName("net.minecraft.network.protocol.Packet"))
+                    sendMethod.invoke(connection, packet)
+                }
+            }
+        } catch (e: Exception) {
+            // Ignore minor sync exceptions
         }
     }
 }

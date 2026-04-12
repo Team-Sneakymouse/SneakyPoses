@@ -49,6 +49,16 @@ class SneakyPoses : JavaPlugin() {
                 }
             }
         }
+        
+        // Pose Sync Tasks
+        server.scheduler.runTaskTimer(this, Runnable {
+            for (player in server.onlinePlayers) {
+                val pose = com.sneakyposes.util.PoseManager.getPose(player) ?: continue
+                if (pose.type == com.sneakyposes.util.PoseType.SLEEP && pose.npcEntity != null) {
+                    com.sneakyposes.util.PacketManager.updateNPCHeadRotation(player, pose.npcEntity)
+                }
+            }
+        }, 0L, 1L)
 
 
 

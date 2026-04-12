@@ -65,6 +65,9 @@ class SleepCommand : CommandBase("sleep") {
 
         // Create ghost NPC
         val npcData = PacketManager.spawnSleepNPC(target, npcLoc) ?: return true
+        val npcId = npcData.first
+        val npcUuid = npcData.second
+        val npcEntity = npcData.third
         
         // Hide the real player
         target.isInvisible = true
@@ -81,8 +84,9 @@ class SleepCommand : CommandBase("sleep") {
             location = location,
             entityUuids = setOf(vehicle.uniqueId), // Track the seat
             blocks = setOf(bedLoc), // Track the fake bed
-            npcId = npcData.first,
-            npcUuid = npcData.second
+            npcId = npcId,
+            npcUuid = npcUuid,
+            npcEntity = npcEntity
         ))
 
         if (sender != target) {
