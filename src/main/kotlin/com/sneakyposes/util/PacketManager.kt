@@ -95,7 +95,6 @@ object PacketManager {
             // Broadcast sequence
             broadcastPlayerNPCPackets(player, npcPlayer, bedLocation.clone(), npcUuid)
 
-            Bukkit.getLogger().info("[SneakyPoses] NPC created for ${player.name}")
             return Triple(npcPlayer.javaClass.getMethod("getId").invoke(npcPlayer) as Int, npcUuid, npcPlayer)
         } catch (e: Exception) {
             Bukkit.getLogger().severe("[SneakyPoses] Failed to spawn NPC for ${player.name}: ${e.message}")
@@ -199,7 +198,6 @@ object PacketManager {
                             }, 1L)
                         } catch (e: Exception) {}
                     }
-                    Bukkit.getLogger().info("[SneakyPoses] NPC spawn packets sent for ${player.name}")
                 } catch (e: Exception) {
                     Bukkit.getLogger().severe("[SneakyPoses] Error in delayed NPC spawn: ${e.message}")
                     e.printStackTrace()
