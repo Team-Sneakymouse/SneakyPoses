@@ -17,7 +17,7 @@ object PoseListenerCleanup {
         player.isInvisible = false
         player.leaveVehicle()
 
-        val safeLoc = findSafeLocation(pose.location)
+        val safeLoc = findSafeLocation(player.location)
         Bukkit.getScheduler().runTask(com.sneakyposes.SneakyPoses.instance, Runnable {
             player.teleport(safeLoc)
         })
