@@ -1,5 +1,9 @@
 sit:
   y-offset: 0.1
+crawl:
+  auto-crawl:
+    pitch-tolerance: 30    # Degrees below horizontal required to trigger crawl on double-shift
+    cooldown-ticks: 10     # Ticks before another shift can cancel the crawl (prevents accidental triple-shift)
 sleep:
   y-offset: 0.1
   npc-name: "[playerName]"

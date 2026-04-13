@@ -35,7 +35,10 @@ Made by [Team Sneakymouse](https://rawb.tv).
 ```yaml
 sit:
   y-offset: 0.1        # Vertical offset of the seat entity
-
+crawl:
+  auto-crawl:
+    pitch-tolerance: 30    # Degrees below horizontal required to trigger crawl on double-shift
+    cooldown-ticks: 10     # Ticks before another shift can cancel the crawl (prevents accidental triple-shift)
 sleep:
   y-offset: 0.1        # Vertical offset of the NPC above the bed location
   npc-name: "[playerName]"  # Display name of the sleeping NPC
