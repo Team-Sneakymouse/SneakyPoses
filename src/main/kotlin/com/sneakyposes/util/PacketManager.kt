@@ -329,7 +329,7 @@ object PacketManager {
             if (diff < -45f) diff = -45f
 
             val finalHeadYaw = flippedBaseYaw + diff
-            val fixedYaw = (finalHeadYaw * 256.0f / 360.0f).toInt().toByte()
+            val fixedYaw = (finalHeadYaw * -256.0f / 360.0f).toInt().toByte()
             val entityClass = Class.forName("net.minecraft.world.entity.Entity")
             val packetClass = Class.forName("net.minecraft.network.protocol.game.ClientboundRotateHeadPacket")
             val packet = packetClass.getConstructor(entityClass, Byte::class.java).newInstance(npcEntity, fixedYaw)
