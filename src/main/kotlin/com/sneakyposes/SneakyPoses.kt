@@ -62,6 +62,12 @@ class SneakyPoses : JavaPlugin() {
 
 
 
+        // Register PlaceholderAPI expansion if available
+        if (server.pluginManager.isPluginEnabled("PlaceholderAPI")) {
+            SneakyPosesExpansion().register()
+            logger.info("PlaceholderAPI found — placeholders registered.")
+        }
+
         logger.info("SneakyPoses plugin has been enabled!")
     }
     

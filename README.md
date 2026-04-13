@@ -28,6 +28,17 @@ Made by [Team Sneakymouse](https://rawb.tv).
 
 ---
 
+## Placeholders
+
+| Placeholder | Description |
+|-------------|-------------|
+| `%sneakyposes_sitting%` | Returns `true` if the player is sitting, `false` otherwise. |
+| `%sneakyposes_crawling%` | Returns `true` if the player is crawling, `false` otherwise. |
+| `%sneakyposes_sleeping%` | Returns `true` if the player is sleeping, `false` otherwise. |
+| `%sneakyposes_posing%` | Returns `true` if the player is posing, `false` otherwise. |
+
+---
+
 ## Configuration
 
 `plugins/SneakyPoses/config.yml`:
