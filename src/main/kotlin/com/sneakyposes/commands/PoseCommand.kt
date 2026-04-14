@@ -1,6 +1,7 @@
 package com.sneakyposes.commands
 
 import com.sneakyposes.SneakyPoses
+import com.sneakyposes.util.SitClickRules
 import org.bukkit.command.CommandSender
 
 class PoseCommand : CommandBase("pose") {
@@ -18,6 +19,7 @@ class PoseCommand : CommandBase("pose") {
 
         if (args.isNotEmpty() && args[0].equals("reload", ignoreCase = true)) {
             SneakyPoses.instance.reloadConfig()
+            SitClickRules.reload(SneakyPoses.instance.config)
             sender.sendMessage("§a[SneakyPoses] Configuration reloaded.")
             return true
         }

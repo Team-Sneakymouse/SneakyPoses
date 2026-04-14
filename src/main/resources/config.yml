@@ -1,5 +1,12 @@
 sit:
   y-offset: 0.1
+  click-blocks:
+    - material: OAK_STAIRS
+      y-offset: 0.35
+    - tag: minecraft:slabs
+      y-offset: 0.6
+    - tag: minecraft:stairs   # or full namespaced key Paper accepts
+      y-offset: 0.6
 crawl:
   auto-crawl:
     pitch-tolerance: 30    # Degrees below horizontal required to trigger crawl on double-shift

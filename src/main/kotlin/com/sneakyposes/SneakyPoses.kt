@@ -5,8 +5,10 @@ import com.sneakyposes.commands.CrawlCommand
 import com.sneakyposes.commands.PoseCommand
 import com.sneakyposes.commands.SleepCommand
 import com.sneakyposes.listeners.PoseListener
+import com.sneakyposes.listeners.SitBlockClickListener
 import com.sneakyposes.util.PoseManager
 import com.sneakyposes.util.PoseType
+import com.sneakyposes.util.SitClickRules
 import org.bukkit.plugin.java.JavaPlugin
 
 class SneakyPoses : JavaPlugin() {
@@ -31,6 +33,8 @@ class SneakyPoses : JavaPlugin() {
         instance = this
         saveDefaultConfig()
 
+        SitClickRules.reload(config)
+
         // Register commands via CommandMap since they are Command objects, not Executors
         val commandMap = server.commandMap
         commandMap.register("sneakyposes", SitCommand())
@@ -40,6 +44,7 @@ class SneakyPoses : JavaPlugin() {
 
         // Register listener
         server.pluginManager.registerEvents(PoseListener(), this)
+        server.pluginManager.registerEvents(SitBlockClickListener(), this)
 
         // Clean up stranded seats from crashes or improper unloads
         for (world in server.worlds) {

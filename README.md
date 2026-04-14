@@ -9,6 +9,7 @@ Made by [Team Sneakymouse](https://rawb.tv).
 ## Features
 
 - **`/sit`** — Mounts the player on an invisible `BlockDisplay` vehicle, locking them into a seated position.
+- **Sit on blocks** — Optional: right-click configured block materials or Minecraft block tags (same permission as `/sit`) with a per-entry Y offset. Horizontal anchor is the block center (X/Z +0.5) except **bottom-half stairs**, which snap to the **lower tread** (±0.25 on X and/or Z from center, including corner stair shapes). **Double slabs** never trigger; **sneaking** disables click-to-sit. Right-click again while sitting to stand.
 - **`/crawl`** — Forces the player into a crawling pose.
 - **`/sleep`** — Spawns a skinned, fake player NPC in a sleeping pose at the player's location. The real player is made invisible. Head rotation tracks where the player looks (clamped to ±45° to prevent neck-breaking).
 - **Safe dismount** — When leaving a pose, players are teleported to the nearest non-solid block (prioritizing upward Y) to prevent clipping into the ground.
@@ -55,7 +56,12 @@ Targeting another player requires `sneakyposes.others` (or the console). You can
 
 ```yaml
 sit:
-  y-offset: 0.1        # Vertical offset of the seat entity
+  y-offset: 0.1        # Vertical offset for `/sit` (and default anchor behavior)
+  click-blocks:        # Optional: right-click to sit (first match wins)
+    - material: OAK_STAIRS
+      y-offset: 0.35    # Replaces sit.y-offset for this interaction only
+    - tag: minecraft:stairs
+      y-offset: 0.3
 crawl:
   auto-crawl:
     pitch-tolerance: 30    # Degrees below horizontal required to trigger crawl on double-shift
@@ -64,6 +70,12 @@ sleep:
   y-offset: 0.1        # Vertical offset of the NPC above the bed location
   npc-name: "[playerName]"  # Display name of the sleeping NPC
 ```
+
+Each `click-blocks` entry must set exactly one of `material` (Bukkit material name) or `tag` (namespaced block tag, e.g. `minecraft:stairs`), plus `y-offset`. Invalid rows are skipped with a console warning. Changes apply after `/pose reload`.
+
+### Sit on stairs (right-click)
+
+For blocks whose `BlockData` is stairs (`minecraft:stairs` entries included), only **`half: bottom`** stairs are adjusted: the sit anchor moves from the block center to the **lower step** using the stair’s `facing` and `shape` (`straight`, `inner_left`, `inner_right`, `outer_left`, `outer_right`). **Top-half (upside-down) stairs** keep the normal block-center X/Z so you are not shifted onto the wrong geometry.
 
 ### NPC Name Placeholders
 
