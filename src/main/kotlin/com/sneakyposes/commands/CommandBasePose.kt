@@ -17,6 +17,7 @@ import org.bukkit.entity.Player
  *  - Slot 0: only `true`, `false`, or `toggle` (omit from a player to mean toggle)
  *  - Slot 1: player name when present; slot 2: `world,x,y,z` when present
  *  - Targeting another player requires sneakyposes.others (or console)
+ *  - A custom world,x,y,z requires sneakyposes.others (or console)
  *  - Console must supply at least [true|false|toggle] and [playerName]
  */
 abstract class CommandBasePose(name: String) : CommandBase(name) {
@@ -111,6 +112,10 @@ abstract class CommandBasePose(name: String) : CommandBase(name) {
                         sender.sendMessage("Invalid location format. Use: world,x,y,z")
                         return true
                     }
+                if (senderIsPlayer && !hasOthers) {
+                    sender.sendMessage("You don't have permission to specify a custom location.")
+                    return true
+                }
             }
             else -> {
                 sender.sendMessage("Too many arguments. Use: /$name [true|false|toggle] [<player>] [world,x,y,z]")

@@ -33,7 +33,7 @@ Arguments are fixed-order:
 
 1. **`true` | `false` | `toggle`** — Optional for players. If omitted, the command toggles your pose. If present, it must be exactly one of these three words (no aliases such as `on`, `off`, or `1` / `0`). The console must always include this token.
 2. **`<player>`** — Optional for players (defaults to you). Required for the console. Tab completion lists online players only if you have `sneakyposes.others` or you are the console.
-3. **`world,x,y,z`** — Optional custom location (four comma-separated parts). Tab completion suggests the placeholder format only under the same rules as player names (`sneakyposes.others` or console).
+3. **`world,x,y,z`** — Optional custom location (four comma-separated parts). In-game players need `sneakyposes.others` to use this at all (including when targeting yourself). The console is exempt. Tab completion for this slot follows the same rule.
 
 Targeting another player requires `sneakyposes.others` (or the console). You cannot put a player name or coordinates in the first slot; use the order above.
 
