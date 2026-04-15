@@ -9,7 +9,7 @@ Made by [Team Sneakymouse](https://rawb.tv).
 ## Features
 
 - **`/sit`** — Mounts the player on an invisible `BlockDisplay` vehicle, locking them into a seated position.
-- **Sit on blocks** — Optional: right-click configured block materials or Minecraft block tags (same permission as `/sit`) with a per-entry Y offset. Horizontal anchor is the block center (X/Z +0.5) except **bottom-half stairs**, which snap to the **lower tread** (±0.25 on X and/or Z from center, including corner stair shapes). **Double slabs** never trigger; **sneaking** disables click-to-sit. Right-click again while sitting to stand.
+- **Sit on blocks** — Optional: right-click configured blocks (same permission as `/sit`) with a per-entry Y offset. **Only triggers** with an **empty main hand**, when clicking the **top face**, and only if the block above is **air**. Supported blocks: **bottom-half stairs** and **bottom slabs** (no double slabs / upside-down slabs). Bottom-half stairs snap to the **lower tread** (±0.25 on X and/or Z from center, including corner stair shapes). Sneaking disables click-to-sit. Right-click again while sitting to stand.
 - **`/crawl`** — Forces the player into a crawling pose.
 - **`/sleep`** — Spawns a skinned, fake player NPC in a sleeping pose at the player's location. The real player is made invisible. Head rotation tracks where the player looks (clamped to ±45° to prevent neck-breaking).
 - **Safe dismount** — When leaving a pose, players are teleported to the nearest non-solid block (prioritizing upward Y) to prevent clipping into the ground.

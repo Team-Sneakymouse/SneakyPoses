@@ -8,6 +8,10 @@ import org.bukkit.entity.Player
 
 class CrawlCommand : CommandBasePose("crawl") {
 
+    init {
+        aliases = listOf("bellyflop")
+    }
+
     override val poseType = PoseType.CRAWL
 
     override fun applyPose(sender: CommandSender, target: Player, location: Location) {

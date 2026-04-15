@@ -6,7 +6,10 @@ import com.sneakyposes.util.SitClickRules
 import com.sneakyposes.util.SitPoseApplier
 import com.sneakyposes.util.StairSitAnchor
 import org.bukkit.Location
+import org.bukkit.block.BlockFace
+import org.bukkit.block.data.Bisected
 import org.bukkit.block.data.type.Slab
+import org.bukkit.block.data.type.Stairs
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
@@ -23,12 +26,23 @@ class SitBlockClickListener : Listener {
 
         val player = event.player
         if (player.isSneaking) return
+        if (!player.inventory.itemInMainHand.type.isAir) return
         if (!player.hasPermission("sneakyposes.command.sit")) return
+        if (event.blockFace != BlockFace.UP) return
 
         val clicked = event.clickedBlock ?: return
+        if (!clicked.getRelative(BlockFace.UP).type.isAir) return
         val clickedData = clicked.blockData
-        if (clickedData is Slab && clickedData.type == Slab.Type.DOUBLE) return
         val yOffset = SitClickRules.match(clicked.type) ?: return
+        when (clickedData) {
+            is Slab -> {
+                if (clickedData.type != Slab.Type.BOTTOM) return
+            }
+            is Stairs -> {
+                if (clickedData.half != Bisected.Half.BOTTOM) return
+            }
+            else -> return
+        }
 
         val currentPose = PoseManager.getPose(player)
         if (currentPose != null) {
