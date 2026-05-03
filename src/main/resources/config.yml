@@ -1,5 +1,6 @@
 sit:
   y-offset: 0.1
+  end-on-damage: true
   click-blocks:
     - material: OAK_STAIRS
       y-offset: 0.35
@@ -8,9 +9,11 @@ sit:
     - tag: minecraft:stairs   # or full namespaced key Paper accepts
       y-offset: 0.6
 crawl:
+  end-on-damage: true
   auto-crawl:
     pitch-tolerance: 30    # Degrees below horizontal required to trigger crawl on double-shift
     cooldown-ticks: 10     # Ticks before another shift can cancel the crawl (prevents accidental triple-shift)
 sleep:
   y-offset: 0.1
+  end-on-damage: true
   npc-name: "[playerName]"
