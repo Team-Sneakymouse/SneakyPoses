@@ -57,8 +57,10 @@ object PacketManager {
             val getProfileMethod = entityPlayer.javaClass.getMethod("getGameProfile")
             val originalProfile = getProfileMethod.invoke(entityPlayer)
             val getPropertiesMethod = originalProfile.javaClass.getMethod("getProperties")
+            @Suppress("UNCHECKED_CAST")
             val originalProperties = getPropertiesMethod.invoke(originalProfile) as com.google.common.collect.Multimap<String, Any>
-            
+
+            @Suppress("UNCHECKED_CAST")
             val newProperties = getPropertiesMethod.invoke(gameProfile) as com.google.common.collect.Multimap<String, Any>
             newProperties.putAll(originalProperties)
 
@@ -93,7 +95,7 @@ object PacketManager {
             serverPlayerClass.getMethod("setPose", poseClass).invoke(npcPlayer, sleepingPose)
 
             // Broadcast sequence
-            broadcastPlayerNPCPackets(player, npcPlayer, bedLocation.clone(), npcUuid)
+            broadcastPlayerNPCPackets(player, npcPlayer, bedLocation.clone())
 
             return Triple(npcPlayer.javaClass.getMethod("getId").invoke(npcPlayer) as Int, npcUuid, npcPlayer)
         } catch (e: Exception) {
@@ -103,7 +105,7 @@ object PacketManager {
         }
     }
 
-    private fun broadcastPlayerNPCPackets(player: Player, npc: Any, location: Location, npcUuid: UUID) {
+    private fun broadcastPlayerNPCPackets(player: Player, npc: Any, location: Location) {
         val plugin = Bukkit.getPluginManager().getPlugin("SneakyPoses")!!
         try {
             val npcClass = npc.javaClass
@@ -131,6 +133,7 @@ object PacketManager {
                     val noneOfMethod = java.util.EnumSet::class.java.getMethod("noneOf", Class::class.java)
                     val actions = noneOfMethod.invoke(null, addActionClass) as java.util.EnumSet<*>
                     val addMethod = Class.forName("java.util.Set").getMethod("add", Any::class.java)
+                    @Suppress("UNCHECKED_CAST")
                     addMethod.invoke(actions, java.lang.Enum.valueOf(addActionClass as Class<out Enum<*>>, "ADD_PLAYER"))
                     
                     val infoPacket = playerInfoPacketConstructor.newInstance(

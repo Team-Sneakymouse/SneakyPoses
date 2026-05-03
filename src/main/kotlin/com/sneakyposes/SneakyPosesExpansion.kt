@@ -20,7 +20,7 @@ class SneakyPosesExpansion : PlaceholderExpansion() {
 
     override fun getIdentifier() = SneakyPoses.IDENTIFIER
     override fun getAuthor() = "Team Sneakymouse"
-    override fun getVersion() = SneakyPoses.instance.description.version
+    override fun getVersion() = SneakyPoses.instance.pluginMeta.version
     override fun persist() = true
 
     override fun onRequest(player: OfflinePlayer?, params: String): String? {
