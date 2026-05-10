@@ -143,6 +143,12 @@ abstract class CommandBasePose(name: String) : CommandBase(name) {
             return true
         }
 
+        // If the player is already in a DIFFERENT pose, clean it up first
+        val existingPose = PoseManager.getPose(target)
+        if (existingPose != null && existingPose.type != poseType) {
+            com.sneakyposes.listeners.PoseListenerCleanup.cleanupPose(target)
+        }
+
         if (currentlyActive) {
             // Already in this pose - stop it first (toggle off if same type)
             if (wantActive == null) {

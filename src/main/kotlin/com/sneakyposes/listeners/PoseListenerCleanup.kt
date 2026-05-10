@@ -27,7 +27,13 @@ object PoseListenerCleanup {
         }
 
         pose.blocks.forEach { loc ->
-            PacketManager.clearBlockChange(player, loc)
+            if (pose.type == PoseType.CRAWL) {
+                if (loc.block.type == org.bukkit.Material.BARRIER) {
+                    loc.block.type = org.bukkit.Material.AIR
+                }
+            } else {
+                PacketManager.clearBlockChange(player, loc)
+            }
         }
 
         if (pose.type == PoseType.SLEEP && pose.npcId != null && pose.npcUuid != null) {

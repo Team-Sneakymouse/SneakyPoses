@@ -77,6 +77,10 @@ class SneakyPoses : JavaPlugin() {
     }
     
     override fun onDisable() {
+        // Clean up all active poses for all online players
+        for (player in server.onlinePlayers) {
+            com.sneakyposes.listeners.PoseListenerCleanup.cleanupPose(player)
+        }
         logger.info("SneakyPoses plugin has been disabled!")
     }
     

@@ -96,13 +96,19 @@ class PoseListener : Listener {
 
     private fun startCrawl(player: Player) {
         val location = player.location
-        val headLoc = location.clone().add(0.0, 1.8, 0.0)
-        PacketManager.sendBlockChange(player, headLoc, Material.BARRIER)
+        val barrierLoc = location.clone().add(0.0, 1.5, 0.0).block.location
+        
+        val blocks = if (barrierLoc.block.type.isAir) {
+            barrierLoc.block.type = Material.BARRIER
+            setOf(barrierLoc)
+        } else {
+            emptySet()
+        }
 
         PoseManager.setPose(player, PoseData(
             type = PoseType.CRAWL,
             location = location,
-            blocks = setOf(headLoc)
+            blocks = blocks
         ))
         crawlStartTick[player.uniqueId] = Bukkit.getCurrentTick().toLong()
     }
@@ -117,17 +123,24 @@ class PoseListener : Listener {
             val toBlock = event.to.block
             
             if (fromBlock != toBlock) {
-                // Remove old barrier (fake)
+                // Remove old barrier (REAL)
                 pose.blocks.forEach { 
-                    PacketManager.clearBlockChange(player, it)
+                    if (it.block.type == Material.BARRIER) {
+                        it.block.type = Material.AIR
+                    }
                 }
                 
-                // Place new barrier above head (fake)
-                val newBarrierLoc = event.to.clone().add(0.0, 1.8, 0.0)
-                PacketManager.sendBlockChange(player, newBarrierLoc, Material.BARRIER)
+                // Place new barrier above head (REAL)
+                val newBarrierLoc = event.to.clone().add(0.0, 1.5, 0.0).block.location
+                val newBlocks = if (newBarrierLoc.block.type.isAir) {
+                    newBarrierLoc.block.type = Material.BARRIER
+                    setOf(newBarrierLoc)
+                } else {
+                    emptySet()
+                }
                 
                 // Save data
-                val newData = pose.copy(blocks = setOf(newBarrierLoc))
+                val newData = pose.copy(blocks = newBlocks)
                 PoseManager.setPose(player, newData)
             }
         }

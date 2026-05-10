@@ -15,13 +15,19 @@ class CrawlCommand : CommandBasePose("crawl") {
     override val poseType = PoseType.CRAWL
 
     override fun applyPose(sender: CommandSender, target: Player, location: Location) {
-        val headLoc = location.clone().add(0.0, 1.8, 0.0)
-        PacketManager.sendBlockChange(target, headLoc, Material.BARRIER)
+        val barrierLoc = location.clone().add(0.0, 1.5, 0.0).block.location
+        
+        val blocks = if (barrierLoc.block.type.isAir) {
+            barrierLoc.block.type = Material.BARRIER
+            setOf(barrierLoc)
+        } else {
+            emptySet()
+        }
 
         PoseManager.setPose(target, PoseData(
             type = PoseType.CRAWL,
             location = location,
-            blocks = setOf(headLoc)
+            blocks = blocks
         ))
 
         if (sender != target) {
