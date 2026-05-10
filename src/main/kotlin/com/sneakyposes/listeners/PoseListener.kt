@@ -37,6 +37,11 @@ class PoseListener : Listener {
         }
 
         if (com.sneakyposes.SneakyPoses.instance.config.getBoolean(configKey, true)) {
+            // Ignore suffocation damage for crawling players to prevent barrier-related kicking
+            if (pose.type == PoseType.CRAWL && event.cause == EntityDamageEvent.DamageCause.SUFFOCATION) {
+                event.isCancelled = true
+                return
+            }
             PoseListenerCleanup.cleanupPose(player)
         }
     }
