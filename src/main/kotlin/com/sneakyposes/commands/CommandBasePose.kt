@@ -124,7 +124,8 @@ abstract class CommandBasePose(name: String) : CommandBase(name) {
         }
 
         // ── Resolve toggle intent ─────────────────────────────────────────
-        val currentlyActive = PoseManager.getPose(target)?.type == poseType
+        val existingPose = PoseManager.getPose(target)
+        val currentlyActive = existingPose?.type == poseType
 
         val shouldActivate = when (wantActive) {
             true  -> true
@@ -133,9 +134,9 @@ abstract class CommandBasePose(name: String) : CommandBase(name) {
         }
 
         // ── Apply ─────────────────────────────────────────────────────────
+        
+        // If we want to STOP or TOGGLE OFF
         if (!shouldActivate) {
-            // Stop the pose — PoseListener cleanup path via sneaking normally handles
-            // this, but we also support explicit /cmd false
             if (currentlyActive) {
                 com.sneakyposes.listeners.PoseListenerCleanup.cleanupPose(target)
                 if (sender != target) sender.sendMessage("Stopped ${name}ing for ${target.name}.")
@@ -143,19 +144,10 @@ abstract class CommandBasePose(name: String) : CommandBase(name) {
             return true
         }
 
-        // If the player is already in a DIFFERENT pose, clean it up first
-        val existingPose = PoseManager.getPose(target)
-        if (existingPose != null && existingPose.type != poseType) {
+        // If we want to START (or RESTART) the pose
+        // Clean up ANY existing pose first to ensure markers/entities are removed
+        if (existingPose != null) {
             com.sneakyposes.listeners.PoseListenerCleanup.cleanupPose(target)
-        }
-
-        if (currentlyActive) {
-            // Already in this pose - stop it first (toggle off if same type)
-            if (wantActive == null) {
-                com.sneakyposes.listeners.PoseListenerCleanup.cleanupPose(target)
-                if (sender != target) sender.sendMessage("Stopped ${name}ing for ${target.name}.")
-                return true
-            }
         }
 
         applyPose(sender, target, location)

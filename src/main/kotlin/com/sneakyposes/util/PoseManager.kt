@@ -40,4 +40,6 @@ object PoseManager {
     }
     
     fun getAllPosingPlayers(): Collection<PoseData> = activePoses.values
+
+    fun getAllActivePoses(): Map<UUID, PoseData> = activePoses.toMap()
 }

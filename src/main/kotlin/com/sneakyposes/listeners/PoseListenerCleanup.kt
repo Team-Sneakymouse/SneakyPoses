@@ -42,6 +42,34 @@ object PoseListenerCleanup {
         }
     }
 
+    fun cleanupAll() {
+        val poses = PoseManager.getAllActivePoses()
+        poses.forEach { (uuid, pose) ->
+            // Cleanup blocks (important for BARRIERS)
+            pose.blocks.forEach { loc ->
+                if (pose.type == PoseType.CRAWL) {
+                    if (loc.block.type == org.bukkit.Material.BARRIER) {
+                        loc.block.type = org.bukkit.Material.AIR
+                    }
+                }
+            }
+
+            // Cleanup entities
+            pose.entityUuids.forEach { eUuid ->
+                Bukkit.getEntity(eUuid)?.remove()
+            }
+            
+            // Handle NPC removal for SLEEP if player is online
+            val player = Bukkit.getPlayer(uuid)
+            if (player != null) {
+                player.isInvisible = false
+                if (pose.type == PoseType.SLEEP && pose.npcId != null && pose.npcUuid != null) {
+                    PacketManager.removeSleepNPC(player, pose.npcId, pose.npcUuid, pose.blocks.firstOrNull())
+                }
+            }
+        }
+    }
+
     fun findSafeLocation(start: org.bukkit.Location): org.bukkit.Location {
         val world = start.world
         val blockLoc = start.block.location

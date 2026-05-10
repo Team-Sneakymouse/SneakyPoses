@@ -98,8 +98,16 @@ class PoseListener : Listener {
         val location = player.location
         val barrierLoc = location.clone().add(0.0, 1.5, 0.0).block.location
         
+        val entities = mutableSetOf<UUID>()
         val blocks = if (barrierLoc.block.type.isAir) {
             barrierLoc.block.type = Material.BARRIER
+            
+            // Spawn marker for crash recovery
+            val marker = barrierLoc.world.spawn(barrierLoc.clone().add(0.5, 0.0, 0.5), org.bukkit.entity.Marker::class.java) {
+                it.addScoreboardTag("SneakyPosesBarrierMarker")
+            }
+            entities.add(marker.uniqueId)
+            
             setOf(barrierLoc)
         } else {
             emptySet()
@@ -108,7 +116,8 @@ class PoseListener : Listener {
         PoseManager.setPose(player, PoseData(
             type = PoseType.CRAWL,
             location = location,
-            blocks = blocks
+            blocks = blocks,
+            entityUuids = entities
         ))
         crawlStartTick[player.uniqueId] = Bukkit.getCurrentTick().toLong()
     }
@@ -123,24 +132,34 @@ class PoseListener : Listener {
             val toBlock = event.to.block
             
             if (fromBlock != toBlock) {
-                // Remove old barrier (REAL)
+                // Remove old barrier (REAL) and its marker
                 pose.blocks.forEach { 
                     if (it.block.type == Material.BARRIER) {
                         it.block.type = Material.AIR
                     }
                 }
+                pose.entityUuids.forEach { uuid ->
+                    Bukkit.getEntity(uuid)?.remove()
+                }
                 
-                // Place new barrier above head (REAL)
+                // Place new barrier above head (REAL) and spawn new marker
                 val newBarrierLoc = event.to.clone().add(0.0, 1.5, 0.0).block.location
+                val newEntities = mutableSetOf<UUID>()
                 val newBlocks = if (newBarrierLoc.block.type.isAir) {
                     newBarrierLoc.block.type = Material.BARRIER
+                    
+                    val marker = newBarrierLoc.world.spawn(newBarrierLoc.clone().add(0.5, 0.0, 0.5), org.bukkit.entity.Marker::class.java) {
+                        it.addScoreboardTag("SneakyPosesBarrierMarker")
+                    }
+                    newEntities.add(marker.uniqueId)
+                    
                     setOf(newBarrierLoc)
                 } else {
                     emptySet()
                 }
                 
                 // Save data
-                val newData = pose.copy(blocks = newBlocks)
+                val newData = pose.copy(blocks = newBlocks, entityUuids = newEntities)
                 PoseManager.setPose(player, newData)
             }
         }

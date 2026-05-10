@@ -46,10 +46,17 @@ class SneakyPoses : JavaPlugin() {
         server.pluginManager.registerEvents(PoseListener(), this)
         server.pluginManager.registerEvents(SitBlockClickListener(), this)
 
-        // Clean up stranded seats from crashes or improper unloads
+        // Clean up stranded seats and barriers from crashes or improper unloads
         for (world in server.worlds) {
             for (entity in world.entities) {
                 if (entity.scoreboardTags.contains("SneakyPosesSeat")) {
+                    entity.remove()
+                }
+                if (entity.scoreboardTags.contains("SneakyPosesBarrierMarker")) {
+                    val loc = entity.location.block.location
+                    if (loc.block.type == org.bukkit.Material.BARRIER) {
+                        loc.block.type = org.bukkit.Material.AIR
+                    }
                     entity.remove()
                 }
             }
@@ -77,10 +84,8 @@ class SneakyPoses : JavaPlugin() {
     }
     
     override fun onDisable() {
-        // Clean up all active poses for all online players
-        for (player in server.onlinePlayers) {
-            com.sneakyposes.listeners.PoseListenerCleanup.cleanupPose(player)
-        }
+        // Clean up all active poses (blocks, entities, NPCs) globally
+        com.sneakyposes.listeners.PoseListenerCleanup.cleanupAll()
         logger.info("SneakyPoses plugin has been disabled!")
     }
     
