@@ -94,9 +94,6 @@ object PacketManager {
             val sleepingPose = poseClass.getField("SLEEPING").get(null)
             serverPlayerClass.getMethod("setPose", poseClass).invoke(npcPlayer, sleepingPose)
 
-            // Broadcast sequence
-            broadcastPlayerNPCPackets(player, npcPlayer, bedLocation.clone())
-
             return Triple(npcPlayer.javaClass.getMethod("getId").invoke(npcPlayer) as Int, npcUuid, npcPlayer)
         } catch (e: Exception) {
             Bukkit.getLogger().severe("[SneakyPoses] Failed to spawn NPC for ${player.name}: ${e.message}")
@@ -105,8 +102,10 @@ object PacketManager {
         }
     }
 
-    private fun broadcastPlayerNPCPackets(player: Player, npc: Any, location: Location) {
-        val plugin = Bukkit.getPluginManager().getPlugin("SneakyPoses")!!
+    /**
+     * Sends the necessary NPC packets to a specific viewer for a posing player.
+     */
+    fun sendNPCPacketsToPlayer(viewer: Player, posingPlayer: Player, npc: Any, location: Location) {
         try {
             val npcClass = npc.javaClass
             val craftPlayerClass = Class.forName("${Bukkit.getServer().javaClass.packageName}.entity.CraftPlayer")
@@ -117,49 +116,43 @@ object PacketManager {
             val addActionClass = Class.forName("net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket\$Action")
             val playerInfoPacketConstructor = Class.forName("net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket").getConstructor(java.util.EnumSet::class.java, java.util.Collection::class.java)
 
-            // Calculate bed location at world bottom (standard GSit technique)
-            val bedLoc = location.clone()
-            bedLoc.y = location.world.minHeight.toDouble()
+            val viewerHandle = getHandleMethod.invoke(viewer)
+            val viewerConn = connectionField.get(viewerHandle)
 
             // 1. Initial Registration (INFO packet)
-            player.world.players.forEach { viewer ->
-                try {
-                    val viewerHandle = getHandleMethod.invoke(viewer)
-                    val viewerConn = connectionField.get(viewerHandle)
-                    
-                    // Assign viewer's connection to NPC temporarily to avoid NPE during packet construction
-                    connectionField.set(npc, viewerConn)
-                    
-                    val noneOfMethod = java.util.EnumSet::class.java.getMethod("noneOf", Class::class.java)
-                    val actions = noneOfMethod.invoke(null, addActionClass) as java.util.EnumSet<*>
-                    val addMethod = Class.forName("java.util.Set").getMethod("add", Any::class.java)
-                    @Suppress("UNCHECKED_CAST")
-                    addMethod.invoke(actions, java.lang.Enum.valueOf(addActionClass as Class<out Enum<*>>, "ADD_PLAYER"))
-                    
-                    val infoPacket = playerInfoPacketConstructor.newInstance(
-                        actions,
-                        java.util.Collections.singletonList(npc)
-                    )
-                    sendMethod.invoke(viewerConn, infoPacket)
-                } catch (e: Exception) {}
-            }
+            // Assign viewer's connection to NPC temporarily to avoid NPE during packet construction
+            connectionField.set(npc, viewerConn)
+            
+            val noneOfMethod = java.util.EnumSet::class.java.getMethod("noneOf", Class::class.java)
+            val actions = noneOfMethod.invoke(null, addActionClass) as java.util.EnumSet<*>
+            val addMethod = Class.forName("java.util.Set").getMethod("add", Any::class.java)
+            @Suppress("UNCHECKED_CAST")
+            addMethod.invoke(actions, java.lang.Enum.valueOf(addActionClass as Class<out Enum<*>>, "ADD_PLAYER"))
+            
+            val infoPacket = playerInfoPacketConstructor.newInstance(
+                actions,
+                java.util.Collections.singletonList(npc)
+            )
+            sendMethod.invoke(viewerConn, infoPacket)
 
-            // 2. Delayed Body Spawning (2 ticks later)
+            // 2. Body Spawning
+            val plugin = Bukkit.getPluginManager().getPlugin("SneakyPoses")!!
             Bukkit.getScheduler().runTaskLater(plugin, Runnable {
                 try {
                     val nmsBlockPosClass = Class.forName("net.minecraft.core.BlockPos")
                     val blockPosConstructor = nmsBlockPosClass.getConstructor(Int::class.java, Int::class.java, Int::class.java)
                     val spawnPos = blockPosConstructor.newInstance(location.blockX, location.blockY, location.blockZ)
+                    
+                    val bedLoc = location.clone()
+                    bedLoc.y = location.world.minHeight.toDouble()
                     val nmsBedPos = blockPosConstructor.newInstance(bedLoc.blockX, bedLoc.blockY, bedLoc.blockZ)
                     
                     val nmsEntityClass = Class.forName("net.minecraft.world.entity.Entity")
                     val addEntityPacket = Class.forName("net.minecraft.network.protocol.game.ClientboundAddEntityPacket").getConstructor(nmsEntityClass, Int::class.java, nmsBlockPosClass).newInstance(npc, 0, spawnPos)
 
-                    // Metadata - Set directly on NPC instead of constructing DataValues manually
                     val dataWatcher = npcClass.getMethod("getEntityData").invoke(npc)
                     val setMethod = dataWatcher.javaClass.getMethod("set", Class.forName("net.minecraft.network.syncher.EntityDataAccessor"), Any::class.java)
                     
-                    // SLEEPING_POS = bedLoc (Head of bed) - index 14
                     val serializersClass = Class.forName("net.minecraft.network.syncher.EntityDataSerializers")
                     val nmsOptionalBlockPosClass = serializersClass.getField("OPTIONAL_BLOCK_POS").get(null)
                     val sleepPosAccessor = nmsOptionalBlockPosClass.javaClass.getMethod("createAccessor", Int::class.javaPrimitiveType).invoke(nmsOptionalBlockPosClass, 14)
@@ -167,12 +160,9 @@ object PacketManager {
                     val bedPosOptional = optionalClass.getMethod("of", Any::class.java).invoke(null, nmsBedPos)
                     setMethod.invoke(dataWatcher, sleepPosAccessor, bedPosOptional)
                     
-                    // Skin customization (all layers) - index 17
                     val nmsByteClass = serializersClass.getField("BYTE").get(null)
                     val skinAccessor = nmsByteClass.javaClass.getMethod("createAccessor", Int::class.javaPrimitiveType).invoke(nmsByteClass, 17)
                     setMethod.invoke(dataWatcher, skinAccessor, 127.toByte())
-                    
-                    // Pose is already set in spawnSleepNPC via setPose, which automatically updates the dataWatcher!
                     
                     val nonDefaultValues = dataWatcher.javaClass.getMethod("getNonDefaultValues").invoke(dataWatcher) as List<*>
                     val metaPacket = Class.forName("net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket").getConstructor(Int::class.javaPrimitiveType, List::class.java).newInstance(npcClass.getMethod("getId").invoke(npc), nonDefaultValues)
@@ -183,30 +173,34 @@ object PacketManager {
                     val nmsPositionMoveRotation = nmsPositionMoveRotationClass.getMethod("of", nmsEntityClass).invoke(null, npc)
                     val teleportPacket = Class.forName("net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket").getConstructor(Int::class.java, nmsPositionMoveRotationClass, java.util.Set::class.java, Boolean::class.java).newInstance(npcClass.getMethod("getId").invoke(npc), nmsPositionMoveRotation, java.util.Collections.emptySet<Any>(), false)
 
-                    player.world.players.forEach { viewer ->
+                    val currentConn = connectionField.get(getHandleMethod.invoke(viewer))
+                    sendMethod.invoke(currentConn, addEntityPacket)
+                    sendMethod.invoke(currentConn, metaPacket)
+                    sendMethod.invoke(currentConn, rotateHeadPacket)
+                    sendMethod.invoke(currentConn, teleportPacket)
+                    
+                    Bukkit.getScheduler().runTaskLater(plugin, Runnable {
                         try {
-                            val viewerHandle = getHandleMethod.invoke(viewer)
-                            val viewerConn = connectionField.get(viewerHandle)
-                            sendMethod.invoke(viewerConn, addEntityPacket)
-                            sendMethod.invoke(viewerConn, metaPacket)
-                            sendMethod.invoke(viewerConn, rotateHeadPacket)
-                            sendMethod.invoke(viewerConn, teleportPacket)
-                            
-                            // GSit double-teleport trick (1nd teleport 1 tick later)
-                            Bukkit.getScheduler().runTaskLater(plugin, Runnable {
-                                try {
-                                    val currentConn = connectionField.get(getHandleMethod.invoke(viewer))
-                                    sendMethod.invoke(currentConn, teleportPacket)
-                                } catch (e: Exception) {}
-                            }, 1L)
+                            val doubleCheckConn = connectionField.get(getHandleMethod.invoke(viewer))
+                            sendMethod.invoke(doubleCheckConn, teleportPacket)
                         } catch (e: Exception) {}
-                    }
+                    }, 1L)
                 } catch (e: Exception) {
-                    Bukkit.getLogger().severe("[SneakyPoses] Error in delayed NPC spawn: ${e.message}")
-                    e.printStackTrace()
+                    Bukkit.getLogger().severe("[SneakyPoses] Error in single-viewer NPC spawn: ${e.message}")
                 }
             }, 2L)
+        } catch (e: Exception) {
+            Bukkit.getLogger().severe("[SneakyPoses] Error broadcasting NPC packets to ${viewer.name}: ${e.message}")
+        }
+    }
 
+    fun broadcastPlayerNPCPackets(player: Player, npc: Any, location: Location) {
+        val pose = PoseManager.getPose(player) ?: return
+        try {
+            player.world.players.forEach { viewer ->
+                sendNPCPacketsToPlayer(viewer, player, npc, location)
+                pose.viewerUuids.add(viewer.uniqueId)
+            }
         } catch (e: Exception) {
             Bukkit.getLogger().severe("[SneakyPoses] Error in broadcastPlayerNPCPackets: ${e.message}")
             e.printStackTrace()

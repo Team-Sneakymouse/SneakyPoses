@@ -167,9 +167,13 @@ class PoseListener : Listener {
 
     @EventHandler
     fun onQuit(event: PlayerQuitEvent) {
+        val uuid = event.player.uniqueId
         cleanupPose(event.player)
-        lastSneakTime.remove(event.player.uniqueId)
-        crawlStartTick.remove(event.player.uniqueId)
+        lastSneakTime.remove(uuid)
+        crawlStartTick.remove(uuid)
+        
+        // Remove viewer from all active tracking sets
+        PoseManager.getAllActivePoses().values.forEach { it.viewerUuids.remove(uuid) }
     }
 
     private fun findSafeLocation(start: org.bukkit.Location) = PoseListenerCleanup.findSafeLocation(start)

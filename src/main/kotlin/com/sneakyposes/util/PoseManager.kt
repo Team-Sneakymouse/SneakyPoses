@@ -15,7 +15,8 @@ data class PoseData(
     val blocks: Set<Location> = emptySet(),
     val npcId: Int? = null,
     val npcUuid: UUID? = null,
-    val npcEntity: Any? = null
+    val npcEntity: Any? = null,
+    val viewerUuids: MutableSet<UUID> = mutableSetOf()
 )
 
 object PoseManager {

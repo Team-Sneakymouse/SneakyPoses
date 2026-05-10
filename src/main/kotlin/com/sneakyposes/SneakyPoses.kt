@@ -10,6 +10,7 @@ import com.sneakyposes.util.PoseManager
 import com.sneakyposes.util.PoseType
 import com.sneakyposes.util.SitClickRules
 import org.bukkit.plugin.java.JavaPlugin
+import org.bukkit.entity.Player
 
 class SneakyPoses : JavaPlugin() {
 
@@ -50,9 +51,31 @@ class SneakyPoses : JavaPlugin() {
         commandMap.register("sneakyposes", SleepCommand())
         commandMap.register("sneakyposes", PoseCommand())
 
-        // Register listener
+        // Register listeners
         server.pluginManager.registerEvents(PoseListener(), this)
         server.pluginManager.registerEvents(SitBlockClickListener(), this)
+
+        // Background task for synchronization (Visibility & Head Rotation)
+        server.scheduler.runTaskTimer(this, Runnable {
+            PoseManager.getAllActivePoses().forEach { (uuid, pose) ->
+                val player = server.getPlayer(uuid) ?: return@forEach
+                if (pose.type != PoseType.SLEEP || pose.npcEntity == null) return@forEach
+
+                // 1. Sync Visibility for late-joiners
+                val playersInRange = player.world.getNearbyEntities(player.location, 48.0, 48.0, 48.0)
+                    .filterIsInstance<Player>()
+                
+                playersInRange.forEach { viewer ->
+                    if (!pose.viewerUuids.contains(viewer.uniqueId)) {
+                        com.sneakyposes.util.PacketManager.sendNPCPacketsToPlayer(viewer, player, pose.npcEntity, pose.location)
+                        pose.viewerUuids.add(viewer.uniqueId)
+                    }
+                }
+
+                // 2. Periodic Head Rotation Sync
+                com.sneakyposes.util.PacketManager.updateNPCHeadRotation(player, pose.npcEntity, (pose.location.yaw + 180f) % 360f)
+            }
+        }, 20L, 20L)
 
         // Clean up stranded seats and barriers from crashes or improper unloads
         for (world in server.worlds) {

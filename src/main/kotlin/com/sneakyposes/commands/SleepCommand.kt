@@ -71,7 +71,7 @@ class SleepCommand : CommandBasePose("sleep") {
         vehicle.addPassenger(target)
 
         // Record pose
-        PoseManager.setPose(target, PoseData(
+        val pose = PoseData(
             type = PoseType.SLEEP,
             location = location,
             entityUuids = setOf(vehicle.uniqueId),
@@ -79,7 +79,11 @@ class SleepCommand : CommandBasePose("sleep") {
             npcId = npcData.first,
             npcUuid = npcData.second,
             npcEntity = npcData.third
-        ))
+        )
+        PoseManager.setPose(target, pose)
+
+        // Broadcast packets immediately now that pose is registered
+        PacketManager.broadcastPlayerNPCPackets(target, npcData.third, npcLoc)
 
         if (sender != target) {
             sender.sendMessage("Sleeping ${target.name} at ${location.blockX}, ${location.blockY}, ${location.blockZ}")
