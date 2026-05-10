@@ -7,12 +7,11 @@ import org.bukkit.command.CommandSender
 class PoseCommand : CommandBase("pose") {
 
     init {
-        permission = "sneakyposes.reload"
         description = "Reloads the SneakyPoses configuration."
     }
 
     override fun execute(sender: CommandSender, commandLabel: String, args: Array<out String>): Boolean {
-        if (!sender.hasPermission(permission!!)) {
+        if (!sender.hasPermission("sneakyposes.reload")) {
             sender.sendMessage("No permission.")
             return true
         }

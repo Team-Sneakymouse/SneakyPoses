@@ -37,6 +37,14 @@ class SneakyPoses : JavaPlugin() {
 
         // Register commands via CommandMap since they are Command objects, not Executors
         val commandMap = server.commandMap
+        val knownCommands = commandMap.knownCommands
+        
+        // Remove conflicting commands to ensure ours take priority (e.g. over CMI)
+        knownCommands.remove("sleep")
+        knownCommands.remove("lay")
+        knownCommands.remove("sit")
+        knownCommands.remove("crawl")
+        
         commandMap.register("sneakyposes", SitCommand())
         commandMap.register("sneakyposes", CrawlCommand())
         commandMap.register("sneakyposes", SleepCommand())

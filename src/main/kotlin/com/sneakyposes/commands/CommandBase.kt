@@ -12,7 +12,7 @@ import org.bukkit.command.Command
 abstract class CommandBase(name: String) : Command(name) {
 
     init {
-        this.permission = "${SneakyPoses.IDENTIFIER}.command.$name"
+        // Permission is handled in execute() to avoid Brigadier sync issues
     }
 
 }

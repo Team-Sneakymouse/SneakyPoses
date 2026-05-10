@@ -10,6 +10,10 @@ import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 
 class SleepCommand : CommandBasePose("sleep") {
+    
+    init {
+        aliases = listOf("lay")
+    }
 
     override val poseType = PoseType.SLEEP
 

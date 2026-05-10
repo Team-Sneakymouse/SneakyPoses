@@ -1,5 +1,6 @@
 package com.sneakyposes.commands
 
+import com.sneakyposes.SneakyPoses
 import com.sneakyposes.util.*
 import org.bukkit.Location
 import org.bukkit.Material

@@ -20,7 +20,7 @@ import org.bukkit.entity.Player
  *  - A custom world,x,y,z requires sneakyposes.others (or console)
  *  - Console must supply at least [true|false|toggle] and [playerName]
  */
-abstract class CommandBasePose(name: String) : CommandBase(name) {
+abstract class CommandBasePose(name: String) : org.bukkit.command.Command(name) {
 
     companion object {
         const val OTHERS_PERMISSION = "${SneakyPoses.IDENTIFIER}.others"
@@ -41,7 +41,8 @@ abstract class CommandBasePose(name: String) : CommandBase(name) {
 
     override fun execute(sender: CommandSender, commandLabel: String, args: Array<out String>): Boolean {
         // ── Base permission ──────────────────────────────────────────────
-        if (!sender.hasPermission(permission!!)) {
+        val perm = "${SneakyPoses.IDENTIFIER}.$name"
+        if (!sender.hasPermission(perm)) {
             sender.sendMessage("No permission.")
             return true
         }
