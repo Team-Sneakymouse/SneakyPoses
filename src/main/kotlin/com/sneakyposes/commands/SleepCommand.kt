@@ -73,7 +73,7 @@ class SleepCommand : CommandBasePose("sleep") {
         // Record pose
         val pose = PoseData(
             type = PoseType.SLEEP,
-            location = location,
+            location = npcLoc,
             entityUuids = setOf(vehicle.uniqueId),
             blocks = setOf(bedLoc),
             npcId = npcData.first,

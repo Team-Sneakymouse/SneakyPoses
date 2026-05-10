@@ -55,27 +55,33 @@ class SneakyPoses : JavaPlugin() {
         server.pluginManager.registerEvents(PoseListener(), this)
         server.pluginManager.registerEvents(SitBlockClickListener(), this)
 
-        // Background task for synchronization (Visibility & Head Rotation)
+        var syncCounter = 0
+        // Background task for synchronization (Visibility @ 20t, Head Rotation @ 1t)
         server.scheduler.runTaskTimer(this, Runnable {
+            syncCounter++
+            val checkVisibility = syncCounter % 20 == 0
+
             PoseManager.getAllActivePoses().forEach { (uuid, pose) ->
                 val player = server.getPlayer(uuid) ?: return@forEach
                 if (pose.type != PoseType.SLEEP || pose.npcEntity == null) return@forEach
 
-                // 1. Sync Visibility for late-joiners
-                val playersInRange = player.world.getNearbyEntities(player.location, 48.0, 48.0, 48.0)
-                    .filterIsInstance<Player>()
-                
-                playersInRange.forEach { viewer ->
-                    if (!pose.viewerUuids.contains(viewer.uniqueId)) {
-                        com.sneakyposes.util.PacketManager.sendNPCPacketsToPlayer(viewer, player, pose.npcEntity, pose.location)
-                        pose.viewerUuids.add(viewer.uniqueId)
+                // 1. Sync Visibility for late-joiners (Every 20 ticks)
+                if (checkVisibility) {
+                    val playersInRange = player.world.getNearbyEntities(player.location, 48.0, 48.0, 48.0)
+                        .filterIsInstance<Player>()
+                    
+                    playersInRange.forEach { viewer ->
+                        if (!pose.viewerUuids.contains(viewer.uniqueId)) {
+                            com.sneakyposes.util.PacketManager.sendNPCPacketsToPlayer(viewer, player, pose.npcEntity, pose.location)
+                            pose.viewerUuids.add(viewer.uniqueId)
+                        }
                     }
                 }
 
-                // 2. Periodic Head Rotation Sync
-                com.sneakyposes.util.PacketManager.updateNPCHeadRotation(player, pose.npcEntity, (pose.location.yaw + 180f) % 360f)
+                // 2. Continuous Head Rotation Sync (Every tick)
+                com.sneakyposes.util.PacketManager.updateNPCHeadRotation(player, pose.npcEntity, pose.location.yaw.toFloat())
             }
-        }, 20L, 20L)
+        }, 1L, 1L)
 
         // Clean up stranded seats and barriers from crashes or improper unloads
         for (world in server.worlds) {
@@ -92,16 +98,6 @@ class SneakyPoses : JavaPlugin() {
                 }
             }
         }
-        
-        // Pose Sync Tasks
-        server.scheduler.runTaskTimer(this, Runnable {
-            for (player in server.onlinePlayers) {
-                val pose = com.sneakyposes.util.PoseManager.getPose(player) ?: continue
-                if (pose.type == com.sneakyposes.util.PoseType.SLEEP && pose.npcEntity != null) {
-                    com.sneakyposes.util.PacketManager.updateNPCHeadRotation(player, pose.npcEntity, pose.location.yaw)
-                }
-            }
-        }, 0L, 1L)
 
 
 

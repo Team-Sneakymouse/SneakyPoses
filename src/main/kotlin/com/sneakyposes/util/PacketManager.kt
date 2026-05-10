@@ -209,6 +209,11 @@ object PacketManager {
 
     fun removeSleepNPC(player: Player, npcId: Int, npcUuid: UUID, bedLoc: Location? = null) {
         val plugin = Bukkit.getPluginManager().getPlugin("SneakyPoses")!!
+        if (!plugin.isEnabled) {
+            // If plugin is disabling, just hide player and return
+            player.isInvisible = false
+            return
+        }
         
         Bukkit.getScheduler().runTaskLater(plugin, Runnable {
             try {
@@ -317,16 +322,32 @@ object PacketManager {
      */
     fun updateNPCHeadRotation(player: Player, npcEntity: Any, baseYaw: Float) {
         try {
-            val flippedBaseYaw = baseYaw + 180f
-            var diff = (player.location.yaw - flippedBaseYaw) % 360f
-            if (diff < -180f) diff += 360f
+            val playerYaw = player.location.yaw
+            
+            // Calculate the shortest angular difference between player yaw and NPC base yaw
+            var diff = (playerYaw - baseYaw) % 360f
             if (diff > 180f) diff -= 360f
+            if (diff < -180f) diff += 360f
 
-            if (diff > 45f) diff = 45f
-            if (diff < -45f) diff = -45f
+            // Mirroring logic: Treat facing towards the NPC the same as facing away
+            // This ensures that looking from the front or back yields the same head swivel
+            val isMirrored = java.lang.Math.abs(diff) > 90f
+            var mirroredDiff = if (isMirrored) {
+                if (diff > 0) diff - 180f else diff + 180f
+            } else {
+                diff
+            }
+            
+            // If mirrored, the directions are inverted relative to the camera, so we flip it back
+            if (isMirrored) mirroredDiff = -mirroredDiff
 
-            val finalHeadYaw = flippedBaseYaw + diff
-            val fixedYaw = (finalHeadYaw * -256.0f / 360.0f).toInt().toByte()
+            // Clamp the final difference to +/- 50 degrees
+            val clampedDiff = mirroredDiff.coerceIn(-50f, 50f)
+            
+            // Apply the swivel to the base yaw (negative offset to match camera-to-world mapping)
+            val finalHeadYaw = baseYaw - clampedDiff
+            val fixedYaw = (finalHeadYaw * 256f / 360f).toInt().toByte()
+            
             val entityClass = Class.forName("net.minecraft.world.entity.Entity")
             val packetClass = Class.forName("net.minecraft.network.protocol.game.ClientboundRotateHeadPacket")
             val packet = packetClass.getConstructor(entityClass, Byte::class.java).newInstance(npcEntity, fixedYaw)
