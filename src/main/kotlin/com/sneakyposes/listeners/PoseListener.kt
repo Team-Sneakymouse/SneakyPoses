@@ -25,7 +25,7 @@ class PoseListener : Listener {
 
     private val DOUBLE_SHIFT_WINDOW_MS = 400L // Must shift twice within this window
 
-    @EventHandler
+    @EventHandler(ignoreCancelled = true)
     fun onDamage(event: EntityDamageEvent) {
         val player = event.entity as? Player ?: return
         val pose = PoseManager.getPose(player) ?: return
