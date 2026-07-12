@@ -11,16 +11,18 @@ import org.bukkit.entity.Player
  */
 object PoseListenerCleanup {
 
-    fun cleanupPose(player: Player) {
+    fun cleanupPose(player: Player, relocate: Boolean = true) {
         val pose = PoseManager.removePose(player) ?: return
 
         player.isInvisible = false
         player.leaveVehicle()
 
-        val safeLoc = findSafeLocation(player.location)
-        Bukkit.getScheduler().runTask(com.sneakyposes.SneakyPoses.instance, Runnable {
-            player.teleport(safeLoc)
-        })
+        if (relocate) {
+            val safeLoc = findSafeLocation(player.location)
+            Bukkit.getScheduler().runTask(com.sneakyposes.SneakyPoses.instance, Runnable {
+                player.teleport(safeLoc)
+            })
+        }
 
         pose.entityUuids.forEach { uuid ->
             Bukkit.getEntity(uuid)?.remove()

@@ -11,6 +11,7 @@ import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerToggleSneakEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerQuitEvent
+import org.bukkit.event.player.PlayerTeleportEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.entity.Player
 import org.bukkit.Bukkit
@@ -24,6 +25,22 @@ class PoseListener : Listener {
     private val crawlStartTick = mutableMapOf<UUID, Long>()
 
     private val DOUBLE_SHIFT_WINDOW_MS = 400L // Must shift twice within this window
+
+    @EventHandler(ignoreCancelled = true)
+    fun onTeleport(event: PlayerTeleportEvent) {
+        val player = event.player
+        val pose = PoseManager.getPose(player) ?: return
+
+        val configKey = when (pose.type) {
+            PoseType.SIT   -> "sit.end-on-teleport"
+            PoseType.CRAWL -> "crawl.end-on-teleport"
+            PoseType.SLEEP -> "sleep.end-on-teleport"
+        }
+
+        if (com.sneakyposes.SneakyPoses.instance.config.getBoolean(configKey, true)) {
+            PoseListenerCleanup.cleanupPose(player, relocate = false)
+        }
+    }
 
     @EventHandler(ignoreCancelled = true)
     fun onDamage(event: EntityDamageEvent) {

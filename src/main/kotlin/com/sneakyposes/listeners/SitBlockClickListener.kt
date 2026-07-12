@@ -1,5 +1,6 @@
 package com.sneakyposes.listeners
 
+import com.sneakyposes.SneakyPoses
 import com.sneakyposes.util.PoseManager
 import com.sneakyposes.util.PoseType
 import com.sneakyposes.util.SitClickRules
@@ -27,7 +28,7 @@ class SitBlockClickListener : Listener {
         val player = event.player
         if (player.isSneaking) return
         if (!player.inventory.itemInMainHand.type.isAir) return
-        if (!player.hasPermission("sneakyposes.command.sit")) return
+        if (!player.hasPermission("${SneakyPoses.IDENTIFIER}.sit")) return
         if (event.blockFace != BlockFace.UP) return
 
         val clicked = event.clickedBlock ?: return
