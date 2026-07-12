@@ -19,7 +19,7 @@ class SleepCommand : CommandBasePose("sleep") {
 
     override fun applyPose(sender: CommandSender, target: Player, location: Location) {
         val yOffset = SneakyPoses.instance.config.getDouble("sleep.y-offset", -0.1)
-        val cameraYOffset = SneakyPoses.instance.config.getDouble("sleep.camera-y-offset", -0.5)
+        val cameraYOffset = SneakyPoses.instance.config.getDouble("sleep.camera-y-offset", -0.4)
 
         // GSit Strategy: Metadata points to fake bed at minHeight
         val bedLoc = location.clone()

@@ -17,7 +17,7 @@ crawl:
     cooldown-ticks: 10     # Ticks before another shift can cancel the crawl (prevents accidental triple-shift)
 sleep:
   y-offset: 0.1
-  camera-y-offset: -0.5   # Camera offset relative to the sleep body (negative = lower)
+  camera-y-offset: -0.4   # Camera offset relative to the sleep body (negative = lower)
   end-on-damage: true
   end-on-teleport: true
   npc-name: "[playerName]"
