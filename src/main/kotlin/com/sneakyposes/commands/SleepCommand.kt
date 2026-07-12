@@ -19,6 +19,7 @@ class SleepCommand : CommandBasePose("sleep") {
 
     override fun applyPose(sender: CommandSender, target: Player, location: Location) {
         val yOffset = SneakyPoses.instance.config.getDouble("sleep.y-offset", -0.1)
+        val cameraYOffset = SneakyPoses.instance.config.getDouble("sleep.camera-y-offset", -0.5)
 
         // GSit Strategy: Metadata points to fake bed at minHeight
         val bedLoc = location.clone()
@@ -64,9 +65,9 @@ class SleepCommand : CommandBasePose("sleep") {
         // Hide the real player
         target.isInvisible = true
 
-        // Lower the player's camera perspective by spawning the seat 1 block down
+        // Offset the mounted camera relative to the body so first-person view clears the NPC
         val vehicleLoc = playerLoc.clone()
-        vehicleLoc.y -= 1.0
+        vehicleLoc.y += cameraYOffset
         val vehicle = PacketManager.spawnSitVehicle(vehicleLoc, target)
         vehicle.addPassenger(target)
 
