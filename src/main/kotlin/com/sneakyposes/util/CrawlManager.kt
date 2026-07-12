@@ -13,7 +13,6 @@ object CrawlManager {
     private val sessions = mutableMapOf<UUID, CrawlSession>()
 
     fun beginCrawl(player: Player, location: Location) {
-        stop(player)
         PoseManager.setPose(
             player,
             PoseData(type = PoseType.CRAWL, location = location)
@@ -242,8 +241,8 @@ private object CrawlBoxEntity {
 
     fun sendRemove(player: Player, entityId: Int) {
         val packet = Class.forName("net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket")
-            .getConstructor(Int::class.javaPrimitiveType)
-            .newInstance(entityId)
+            .getConstructor(IntArray::class.java)
+            .newInstance(intArrayOf(entityId))
         sendPacket(player, packet)
     }
 

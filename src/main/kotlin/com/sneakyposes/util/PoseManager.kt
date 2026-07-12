@@ -1,5 +1,6 @@
 package com.sneakyposes.util
 
+import com.sneakyposes.listeners.PoseListenerCleanup
 import org.bukkit.entity.Player
 import org.bukkit.Location
 import java.util.*
@@ -23,8 +24,9 @@ object PoseManager {
     private val activePoses = mutableMapOf<UUID, PoseData>()
 
     fun setPose(player: Player, poseData: PoseData) {
-        // Cleanup existing pose if any
-        removePose(player)
+        if (isPosing(player)) {
+            PoseListenerCleanup.cleanupPose(player, relocate = false)
+        }
         activePoses[player.uniqueId] = poseData
     }
 

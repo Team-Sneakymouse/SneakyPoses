@@ -18,6 +18,12 @@ object PoseListenerCleanup {
         player.isInvisible = false
         player.leaveVehicle()
 
+        if (pose.type == PoseType.SLEEP) {
+            val restoreLoc = pose.location.clone()
+            restoreLoc.pitch = player.location.pitch
+            player.teleport(restoreLoc)
+        }
+
         if (relocate) {
             val safeLoc = findSafeLocation(player.location)
             Bukkit.getScheduler().runTask(com.sneakyposes.SneakyPoses.instance, Runnable {

@@ -72,6 +72,7 @@ abstract class CommandBasePose(name: String) : org.bukkit.command.Command(name) 
 
         val target: Player
         val location: Location
+        val explicitLocation: Boolean
 
         when {
             remainingArgs.isEmpty() -> {
@@ -81,6 +82,7 @@ abstract class CommandBasePose(name: String) : org.bukkit.command.Command(name) 
                 }
                 target = sender as Player
                 location = target.location
+                explicitLocation = false
             }
             remainingArgs.size == 1 -> {
                 val resolved = CommandUtility.parsePlayer(remainingArgs[0])
@@ -95,6 +97,7 @@ abstract class CommandBasePose(name: String) : org.bukkit.command.Command(name) 
                 }
                 target = resolved
                 location = target.location
+                explicitLocation = false
             }
             remainingArgs.size == 2 -> {
                 val resolved = CommandUtility.parsePlayer(remainingArgs[0])
@@ -117,6 +120,7 @@ abstract class CommandBasePose(name: String) : org.bukkit.command.Command(name) 
                     sender.sendMessage("You don't have permission to specify a custom location.")
                     return true
                 }
+                explicitLocation = true
             }
             else -> {
                 sender.sendMessage("Too many arguments. Use: /$name [true|false|toggle] [<player>] [world,x,y,z]")
@@ -146,12 +150,13 @@ abstract class CommandBasePose(name: String) : org.bukkit.command.Command(name) 
         }
 
         // If we want to START (or RESTART) the pose
-        // Clean up ANY existing pose first to ensure markers/entities are removed
+        // Clean up ANY existing pose first; the new pose handles positioning.
         if (existingPose != null) {
-            com.sneakyposes.listeners.PoseListenerCleanup.cleanupPose(target)
+            com.sneakyposes.listeners.PoseListenerCleanup.cleanupPose(target, relocate = false)
         }
 
-        applyPose(sender, target, location)
+        val applyLocation = if (explicitLocation) location else target.location.clone()
+        applyPose(sender, target, applyLocation)
         return true
     }
 
