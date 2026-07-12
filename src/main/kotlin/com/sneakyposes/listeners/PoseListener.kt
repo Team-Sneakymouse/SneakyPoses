@@ -1,10 +1,8 @@
 package com.sneakyposes.listeners
 
-import com.sneakyposes.util.PacketManager
+import com.sneakyposes.util.CrawlManager
 import com.sneakyposes.util.PoseManager
 import com.sneakyposes.util.PoseType
-import com.sneakyposes.util.PoseData
-import org.bukkit.Material
 import org.bukkit.event.EventPriority
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
@@ -13,6 +11,7 @@ import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.event.player.PlayerTeleportEvent
 import org.bukkit.event.entity.EntityDamageEvent
+import org.bukkit.event.entity.EntityToggleSwimEvent
 import org.bukkit.entity.Player
 import org.bukkit.Bukkit
 import java.util.UUID
@@ -54,12 +53,15 @@ class PoseListener : Listener {
         }
 
         if (com.sneakyposes.SneakyPoses.instance.config.getBoolean(configKey, true)) {
-            // Ignore suffocation damage for crawling players to prevent barrier-related kicking
-            if (pose.type == PoseType.CRAWL && event.cause == EntityDamageEvent.DamageCause.SUFFOCATION) {
-                event.isCancelled = true
-                return
-            }
             PoseListenerCleanup.cleanupPose(player)
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    fun onToggleSwim(event: EntityToggleSwimEvent) {
+        val player = event.entity as? Player ?: return
+        if (PoseManager.getPose(player)?.type == PoseType.CRAWL) {
+            event.isCancelled = true
         }
     }
 
@@ -117,73 +119,20 @@ class PoseListener : Listener {
     }
 
     private fun startCrawl(player: Player) {
-        val location = player.location
-        val barrierLoc = location.clone().add(0.0, 1.5, 0.0).block.location
-        
-        val entities = mutableSetOf<UUID>()
-        val blocks = if (barrierLoc.block.type.isAir) {
-            barrierLoc.block.type = Material.BARRIER
-            
-            // Spawn marker for crash recovery
-            val marker = barrierLoc.world.spawn(barrierLoc.clone().add(0.5, 0.0, 0.5), org.bukkit.entity.Marker::class.java) {
-                it.addScoreboardTag("SneakyPosesBarrierMarker")
-            }
-            entities.add(marker.uniqueId)
-            
-            setOf(barrierLoc)
-        } else {
-            emptySet()
-        }
-
-        PoseManager.setPose(player, PoseData(
-            type = PoseType.CRAWL,
-            location = location,
-            blocks = blocks,
-            entityUuids = entities
-        ))
+        CrawlManager.beginCrawl(player, player.location)
         crawlStartTick[player.uniqueId] = Bukkit.getCurrentTick().toLong()
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onMove(event: PlayerMoveEvent) {
+        if (event.isAsynchronous) return
         val player = event.player
-        val pose = PoseManager.getPose(player) ?: return
+        if (PoseManager.getPose(player)?.type != PoseType.CRAWL) return
 
-        if (pose.type == PoseType.CRAWL) {
-            val fromBlock = event.from.block
-            val toBlock = event.to.block
-            
-            if (fromBlock != toBlock) {
-                // Remove old barrier (REAL) and its marker
-                pose.blocks.forEach { 
-                    if (it.block.type == Material.BARRIER) {
-                        it.block.type = Material.AIR
-                    }
-                }
-                pose.entityUuids.forEach { uuid ->
-                    Bukkit.getEntity(uuid)?.remove()
-                }
-                
-                // Place new barrier above head (REAL) and spawn new marker
-                val newBarrierLoc = event.to.clone().add(0.0, 1.5, 0.0).block.location
-                val newEntities = mutableSetOf<UUID>()
-                val newBlocks = if (newBarrierLoc.block.type.isAir) {
-                    newBarrierLoc.block.type = Material.BARRIER
-                    
-                    val marker = newBarrierLoc.world.spawn(newBarrierLoc.clone().add(0.5, 0.0, 0.5), org.bukkit.entity.Marker::class.java) {
-                        it.addScoreboardTag("SneakyPosesBarrierMarker")
-                    }
-                    newEntities.add(marker.uniqueId)
-                    
-                    setOf(newBarrierLoc)
-                } else {
-                    emptySet()
-                }
-                
-                // Save data
-                val newData = pose.copy(blocks = newBlocks, entityUuids = newEntities)
-                PoseManager.setPose(player, newData)
-            }
+        val from = event.from
+        val to = event.to ?: return
+        if (from.x != to.x || from.y != to.y || from.z != to.z) {
+            CrawlManager.tick(player, to)
         }
     }
 
