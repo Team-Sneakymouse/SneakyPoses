@@ -14,6 +14,7 @@ import java.util.Collections
 object CrawlManager {
 
     private val sessions = mutableMapOf<UUID, CrawlSession>()
+    private val uncrawlSuffocationImmunity = mutableSetOf<UUID>()
 
     fun beginCrawl(player: Player, location: Location) {
         PoseManager.setPose(
@@ -39,7 +40,25 @@ object CrawlManager {
     }
 
     fun stop(player: Player) {
-        sessions.remove(player.uniqueId)?.stop()
+        if (sessions.remove(player.uniqueId)?.stop() != null) {
+            grantUncrawlSuffocationImmunity(player)
+        }
+    }
+
+    fun hasUncrawlSuffocationImmunity(player: Player): Boolean {
+        return uncrawlSuffocationImmunity.contains(player.uniqueId)
+    }
+
+    fun clearUncrawlSuffocationImmunity(player: Player) {
+        uncrawlSuffocationImmunity.remove(player.uniqueId)
+    }
+
+    private fun grantUncrawlSuffocationImmunity(player: Player) {
+        val uuid = player.uniqueId
+        uncrawlSuffocationImmunity.add(uuid)
+        Bukkit.getScheduler().runTaskLater(SneakyPoses.instance, Runnable {
+            uncrawlSuffocationImmunity.remove(uuid)
+        }, 2L)
     }
 
     fun tick(player: Player, location: Location) {

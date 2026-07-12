@@ -46,6 +46,13 @@ class PoseListener : Listener {
     @EventHandler(ignoreCancelled = true)
     fun onDamage(event: EntityDamageEvent) {
         val player = event.entity as? Player ?: return
+
+        if (event.cause == EntityDamageEvent.DamageCause.SUFFOCATION &&
+            CrawlManager.hasUncrawlSuffocationImmunity(player)) {
+            event.isCancelled = true
+            return
+        }
+
         val pose = PoseManager.getPose(player) ?: return
 
         val configKey = when (pose.type) {
@@ -149,6 +156,7 @@ class PoseListener : Listener {
     fun onQuit(event: PlayerQuitEvent) {
         val uuid = event.player.uniqueId
         cleanupPose(event.player)
+        CrawlManager.clearUncrawlSuffocationImmunity(event.player)
         lastSneakTime.remove(uuid)
         crawlStartTick.remove(uuid)
         

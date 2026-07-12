@@ -28,7 +28,7 @@ object PoseListenerCleanup {
             player.teleport(restoreLoc)
         }
 
-        if (relocate) {
+        if (relocate && pose.type != PoseType.CRAWL) {
             val safeLoc = findSafeLocation(player.location)
             Bukkit.getScheduler().runTask(com.sneakyposes.SneakyPoses.instance, Runnable {
                 player.teleport(safeLoc)
