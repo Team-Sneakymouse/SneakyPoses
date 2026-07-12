@@ -15,8 +15,12 @@ object PoseListenerCleanup {
     fun cleanupPose(player: Player, relocate: Boolean = true) {
         val pose = PoseManager.removePose(player) ?: return
 
-        player.isInvisible = false
-        player.leaveVehicle()
+        if (pose.type == PoseType.CRAWL) {
+            CrawlManager.stop(player)
+        } else {
+            player.isInvisible = false
+            player.leaveVehicle()
+        }
 
         if (pose.type == PoseType.SLEEP) {
             val restoreLoc = pose.location.clone()
@@ -29,10 +33,6 @@ object PoseListenerCleanup {
             Bukkit.getScheduler().runTask(com.sneakyposes.SneakyPoses.instance, Runnable {
                 player.teleport(safeLoc)
             })
-        }
-
-        if (pose.type == PoseType.CRAWL) {
-            CrawlManager.stop(player)
         }
 
         pose.entityUuids.forEach { uuid ->
@@ -61,7 +61,9 @@ object PoseListenerCleanup {
             val player = Bukkit.getPlayer(uuid)
             if (player != null) {
                 player.isInvisible = false
-                player.isSwimming = false
+                if (pose.type == PoseType.CRAWL) {
+                    CrawlManager.clearCrawlPose(player)
+                }
                 if (pose.type == PoseType.SLEEP && pose.npcId != null && pose.npcUuid != null) {
                     PacketManager.removeSleepNPC(player, pose.npcId, pose.npcUuid, pose.blocks.firstOrNull())
                 }

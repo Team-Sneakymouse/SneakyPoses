@@ -5,6 +5,9 @@ import com.sneakyposes.listeners.PoseListenerCleanup
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.entity.Player
+import org.bukkit.entity.Pose
+import org.bukkit.scheduler.BukkitTask
+import org.bukkit.util.Vector
 import java.util.UUID
 import java.util.Collections
 
@@ -25,12 +28,13 @@ object CrawlManager {
 
         val session = CrawlSession(player)
         sessions[player.uniqueId] = session
-        player.isSwimming = true
+        applyCrawlPose(player)
 
         Bukkit.getScheduler().runTaskLater(SneakyPoses.instance, Runnable {
             if (sessions[player.uniqueId] !== session || session.finished) return@Runnable
             session.moveEnabled = true
-            tick(player, player.location)
+            session.startTickTask()
+            session.tick(player.location)
         }, 1L)
     }
 
@@ -39,9 +43,19 @@ object CrawlManager {
     }
 
     fun tick(player: Player, location: Location) {
-        val session = sessions[player.uniqueId] ?: return
-        if (session.finished || !session.moveEnabled) return
-        session.tick(location)
+        sessions[player.uniqueId]?.tick(location)
+    }
+
+    fun applyCrawlPose(player: Player) {
+        if (!player.isValid) return
+        if (player.pose != Pose.SWIMMING || !player.hasFixedPose()) {
+            player.setPose(Pose.SWIMMING, true)
+        }
+    }
+
+    fun clearCrawlPose(player: Player) {
+        if (!player.isValid) return
+        player.setPose(Pose.STANDING, false)
     }
 
     fun stopAll() {
@@ -54,63 +68,80 @@ object CrawlManager {
         var finished = false
         var moveEnabled = false
         var boxEntityExist = false
+        private var tickTask: BukkitTask? = null
         private val boxEntity: Any = CrawlBoxEntity.create(player.location)
         private val entityId: Int = boxEntity.javaClass.getMethod("getId").invoke(boxEntity) as Int
 
-        fun tick(location: Location) {
-            if (finished || !checkCrawlValid()) return
+        fun startTickTask() {
+            tickTask?.cancel()
+            tickTask = Bukkit.getScheduler().runTaskTimer(SneakyPoses.instance, Runnable {
+                if (finished || sessions[player.uniqueId] !== this@CrawlSession) {
+                    tickTask?.cancel()
+                    return@Runnable
+                }
+                tick(player.location)
+            }, 1L, 1L)
+        }
 
-            val tickLocation = location.clone()
-            val locationBlock = tickLocation.block
-            val blockSize = ((tickLocation.y - tickLocation.blockY) * 100).toInt()
-            tickLocation.y = tickLocation.blockY + if (blockSize >= 40) 2.49 else 1.49
-            val aboveBlock = tickLocation.block
-            val hasSolidBlockAbove = aboveBlock.boundingBox.contains(tickLocation.toVector()) &&
-                aboveBlock.collisionShape.boundingBoxes.isNotEmpty()
-            if (hasSolidBlockAbove) {
+        fun tick(location: Location) {
+            if (finished || !moveEnabled || !checkCrawlValid()) return
+
+            applyCrawlPose(player)
+
+            if (shouldDisableShulker(location, player)) {
                 destroyEntity()
                 return
             }
 
+            updateBoxEntity(location)
+        }
+
+        private fun updateBoxEntity(location: Location) {
+            if (finished || sessions[player.uniqueId] !== this@CrawlSession) return
+            if (shouldDisableShulker(location, player)) {
+                destroyEntity()
+                return
+            }
+
+            val locationBlock = location.block
+            val blockSize = ((location.y - location.blockY) * 100).toInt()
             val playerLocation = location.clone()
-            Bukkit.getScheduler().runTask(SneakyPoses.instance, Runnable {
-                if (finished || sessions[player.uniqueId] !== this@CrawlSession) return@Runnable
 
-                val height = if (locationBlock.boundingBox.height >= 0.4 || playerLocation.y % 0.015625 == 0.0) {
-                    if (player.fallDistance > 0.7f) 0 else blockSize
-                } else {
-                    0
-                }
+            val height = if (locationBlock.boundingBox.height >= 0.4 || playerLocation.y % 0.015625 == 0.0) {
+                if (player.fallDistance > 0.7f) 0 else blockSize
+            } else {
+                0
+            }
 
-                playerLocation.y += if (height >= 40) 1.5 else 0.5
+            playerLocation.y += if (height >= 40) 1.5 else 0.5
 
-                val shulkerClass = Class.forName("net.minecraft.world.entity.monster.Shulker")
-                shulkerClass.getMethod("setRawPeekAmount", Int::class.javaPrimitiveType)
-                    .invoke(boxEntity, if (height >= 40) 100 - height else 0)
+            val shulkerClass = Class.forName("net.minecraft.world.entity.monster.Shulker")
+            shulkerClass.getMethod("setRawPeekAmount", Int::class.javaPrimitiveType)
+                .invoke(boxEntity, if (height >= 40) 100 - height else 0)
 
-                if (!boxEntityExist) {
-                    val entityClass = Class.forName("net.minecraft.world.entity.Entity")
-                    entityClass.getMethod(
-                        "setPos",
-                        Double::class.javaPrimitiveType,
-                        Double::class.javaPrimitiveType,
-                        Double::class.javaPrimitiveType
-                    ).invoke(boxEntity, playerLocation.x, playerLocation.y, playerLocation.z)
+            if (!boxEntityExist) {
+                val entityClass = Class.forName("net.minecraft.world.entity.Entity")
+                entityClass.getMethod(
+                    "setPos",
+                    Double::class.javaPrimitiveType,
+                    Double::class.javaPrimitiveType,
+                    Double::class.javaPrimitiveType
+                ).invoke(boxEntity, playerLocation.x, playerLocation.y, playerLocation.z)
 
-                    CrawlBoxEntity.sendSpawn(player, boxEntity)
-                    boxEntityExist = true
-                    CrawlBoxEntity.sendEntityData(player, boxEntity)
-                } else {
-                    CrawlBoxEntity.sendEntityData(player, boxEntity)
-                    entityClassTeleport(boxEntity, playerLocation)
-                    CrawlBoxEntity.sendTeleport(player, boxEntity, entityId)
-                }
-            })
+                CrawlBoxEntity.sendSpawn(player, boxEntity)
+                boxEntityExist = true
+                CrawlBoxEntity.sendEntityData(player, boxEntity)
+            } else {
+                CrawlBoxEntity.sendEntityData(player, boxEntity)
+                entityClassTeleport(boxEntity, playerLocation)
+                CrawlBoxEntity.sendTeleport(player, boxEntity, entityId)
+            }
         }
 
         fun stop() {
             finished = true
-            player.isSwimming = false
+            tickTask?.cancel()
+            clearCrawlPose(player)
             destroyEntity()
         }
 
@@ -138,6 +169,28 @@ object CrawlManager {
             ).invoke(boxEntity, location.x, location.y, location.z)
         }
     }
+}
+
+private fun shouldDisableShulker(location: Location, player: Player): Boolean {
+    if (hasGsitSolidBlockAbove(location)) return true
+
+    val velocity = player.velocity
+    if (velocity.lengthSquared() <= 0.0001) return false
+
+    val horizontal = Vector(velocity.x, 0.0, velocity.z)
+    if (horizontal.lengthSquared() <= 0.0001) return false
+
+    val ahead = location.clone().add(horizontal.clone().normalize().multiply(0.6))
+    return hasGsitSolidBlockAbove(ahead)
+}
+
+private fun hasGsitSolidBlockAbove(location: Location): Boolean {
+    val blockSize = ((location.y - location.blockY) * 100).toInt()
+    val tickLocation = location.clone()
+    tickLocation.y = tickLocation.blockY + if (blockSize >= 40) 2.49 else 1.49
+    val aboveBlock = tickLocation.block
+    return aboveBlock.boundingBox.contains(tickLocation.toVector()) &&
+        aboveBlock.collisionShape.boundingBoxes.isNotEmpty()
 }
 
 private object CrawlBoxEntity {

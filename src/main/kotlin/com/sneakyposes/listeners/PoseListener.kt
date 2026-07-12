@@ -11,7 +11,9 @@ import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.event.player.PlayerTeleportEvent
 import org.bukkit.event.entity.EntityDamageEvent
+import org.bukkit.event.entity.EntityPoseChangeEvent
 import org.bukkit.event.entity.EntityToggleSwimEvent
+import org.bukkit.entity.Pose
 import org.bukkit.entity.Player
 import org.bukkit.Bukkit
 import java.util.UUID
@@ -54,6 +56,15 @@ class PoseListener : Listener {
 
         if (com.sneakyposes.SneakyPoses.instance.config.getBoolean(configKey, true)) {
             PoseListenerCleanup.cleanupPose(player)
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    fun onPoseChange(event: EntityPoseChangeEvent) {
+        val player = event.entity as? Player ?: return
+        if (PoseManager.getPose(player)?.type != PoseType.CRAWL) return
+        if (event.pose != Pose.SWIMMING) {
+            CrawlManager.applyCrawlPose(player)
         }
     }
 
@@ -123,17 +134,15 @@ class PoseListener : Listener {
         crawlStartTick[player.uniqueId] = Bukkit.getCurrentTick().toLong()
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    fun onMove(event: PlayerMoveEvent) {
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    fun onCrawlMove(event: PlayerMoveEvent) {
         if (event.isAsynchronous) return
         val player = event.player
         if (PoseManager.getPose(player)?.type != PoseType.CRAWL) return
 
-        val from = event.from
+        CrawlManager.applyCrawlPose(player)
         val to = event.to ?: return
-        if (from.x != to.x || from.y != to.y || from.z != to.z) {
-            CrawlManager.tick(player, to)
-        }
+        CrawlManager.tick(player, to)
     }
 
     @EventHandler
