@@ -86,8 +86,16 @@ object PacketManager {
             // Set Pose & Location
             val spawnLoc = bedLocation.clone().add(0.0, 0.15, 0.0)
             val entityClass = Class.forName("net.minecraft.world.entity.Entity")
-            val moveToMethod = entityClass.getMethod("moveTo", Double::class.java, Double::class.java, Double::class.java, Float::class.java, Float::class.java)
-            moveToMethod.invoke(npcPlayer, spawnLoc.x, spawnLoc.y, spawnLoc.z, spawnLoc.yaw, 0f)
+            // 26.x renamed Entity#moveTo -> Entity#snapTo
+            val snapToMethod = entityClass.getMethod(
+                "snapTo",
+                Double::class.javaPrimitiveType,
+                Double::class.javaPrimitiveType,
+                Double::class.javaPrimitiveType,
+                Float::class.javaPrimitiveType,
+                Float::class.javaPrimitiveType
+            )
+            snapToMethod.invoke(npcPlayer, spawnLoc.x, spawnLoc.y, spawnLoc.z, spawnLoc.yaw, 0f)
 
             // Set Pose to Sleeping on the object itself
             val poseClass = Class.forName("net.minecraft.world.entity.Pose")
@@ -152,16 +160,15 @@ object PacketManager {
 
                     val dataWatcher = npcClass.getMethod("getEntityData").invoke(npc)
                     val setMethod = dataWatcher.javaClass.getMethod("set", Class.forName("net.minecraft.network.syncher.EntityDataAccessor"), Any::class.java)
-                    
-                    val serializersClass = Class.forName("net.minecraft.network.syncher.EntityDataSerializers")
-                    val nmsOptionalBlockPosClass = serializersClass.getField("OPTIONAL_BLOCK_POS").get(null)
-                    val sleepPosAccessor = nmsOptionalBlockPosClass.javaClass.getMethod("createAccessor", Int::class.javaPrimitiveType).invoke(nmsOptionalBlockPosClass, 14)
-                    val optionalClass = Class.forName("java.util.Optional")
-                    val bedPosOptional = optionalClass.getMethod("of", Any::class.java).invoke(null, nmsBedPos)
-                    setMethod.invoke(dataWatcher, sleepPosAccessor, bedPosOptional)
-                    
-                    val nmsByteClass = serializersClass.getField("BYTE").get(null)
-                    val skinAccessor = nmsByteClass.javaClass.getMethod("createAccessor", Int::class.javaPrimitiveType).invoke(nmsByteClass, 17)
+
+                    // Prefer LivingEntity#setSleepingPos over hardcoded synched-data IDs (they move between versions)
+                    Class.forName("net.minecraft.world.entity.LivingEntity")
+                        .getMethod("setSleepingPos", nmsBlockPosClass)
+                        .invoke(npc, nmsBedPos)
+
+                    val skinAccessor = Class.forName("net.minecraft.world.entity.Avatar")
+                        .getField("DATA_PLAYER_MODE_CUSTOMISATION")
+                        .get(null)
                     setMethod.invoke(dataWatcher, skinAccessor, 127.toByte())
                     
                     val nonDefaultValues = dataWatcher.javaClass.getMethod("getNonDefaultValues").invoke(dataWatcher) as List<*>

@@ -224,7 +224,10 @@ private object CrawlBoxEntity {
     fun create(location: Location): Any {
         val serverLevel = craftWorldClass.getMethod("getHandle").invoke(location.world)
         val entityTypeClass = Class.forName("net.minecraft.world.entity.EntityType")
-        val shulkerEntityType = entityTypeClass.getField("SHULKER").get(null)
+        // 26.x moved entity type constants from EntityType to EntityTypes
+        val shulkerEntityType = Class.forName("net.minecraft.world.entity.EntityTypes")
+            .getField("SHULKER")
+            .get(null)
         val shulkerClass = Class.forName("net.minecraft.world.entity.monster.Shulker")
         val shulker = shulkerClass.getConstructor(
             entityTypeClass,
