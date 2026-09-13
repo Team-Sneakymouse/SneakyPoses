@@ -1,6 +1,6 @@
 # SneakyPoses
 
-A Paper 1.21+ plugin for controlling player poses — sit, crawl, and sleep — with smooth NPC-based rendering and full client synchronization.
+A Paper 26.2+ plugin for controlling player poses — sit, crawl, and sleep — with smooth NPC-based rendering and full client synchronization.
 
 Made by [Team Sneakymouse](https://rawb.tv).
 
@@ -92,7 +92,7 @@ The `npc-name` field supports:
 
 | Dependency       | Required | Notes                              |
 |------------------|----------|------------------------------------|
-| Paper 1.21.4+    | ✅ Yes   | Not compatible with Spigot/Bukkit  |
+| Paper 26.2+      | ✅ Yes   | Not compatible with Spigot/Bukkit  |
 | PlaceholderAPI   | ❌ No    | Enables dynamic NPC name placeholders |
 
 ---

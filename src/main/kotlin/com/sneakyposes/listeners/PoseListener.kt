@@ -49,7 +49,7 @@ class PoseListener : Listener {
 
         if (event.cause == EntityDamageEvent.DamageCause.SUFFOCATION &&
             CrawlManager.hasUncrawlSuffocationImmunity(player)) {
-            event.isCancelled = true
+            event.setCancelled(true)
             return
         }
 
@@ -78,8 +78,10 @@ class PoseListener : Listener {
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     fun onToggleSwim(event: EntityToggleSwimEvent) {
         val player = event.entity as? Player ?: return
-        if (PoseManager.getPose(player)?.type == PoseType.CRAWL) {
-            event.isCancelled = true
+        if (PoseManager.getPose(player)?.type != PoseType.CRAWL) return
+        if (!event.isSwimming) {
+            player.isSprinting = false
+            CrawlManager.applyCrawlPose(player)
         }
     }
 

@@ -49,7 +49,7 @@ class SitBlockClickListener : Listener {
         if (currentPose != null) {
             if (currentPose.type == PoseType.SIT) {
                 PoseListenerCleanup.cleanupPose(player)
-                event.isCancelled = true
+                event.setCancelled(true)
             }
             return
         }
@@ -67,6 +67,6 @@ class SitBlockClickListener : Listener {
         )
 
         SitPoseApplier.apply(player, player, anchor, yOffset)
-        event.isCancelled = true
+        event.setCancelled(true)
     }
 }

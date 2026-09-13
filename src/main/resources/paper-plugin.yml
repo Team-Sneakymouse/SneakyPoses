@@ -2,7 +2,7 @@ name: SneakyPoses
 version: '${version}'
 main: com.sneakyposes.SneakyPoses
 description: A Minecraft Paper plugin designed to control player poses.
-api-version: '1.21'
+api-version: '26.2'
 authors: [Team Sneakymouse]
 website: https://rawb.tv
 
