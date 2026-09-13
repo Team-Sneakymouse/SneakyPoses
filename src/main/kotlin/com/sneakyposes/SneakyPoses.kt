@@ -83,11 +83,12 @@ class SneakyPoses : JavaPlugin() {
             }
         }, 1L, 1L)
 
-        // Clean up stranded seats and barriers from crashes or improper unloads
+        // Clean up stranded seats (any entity type) and barrier markers from crashes
         for (world in server.worlds) {
-            for (entity in world.entities) {
+            for (entity in world.entities.toList()) {
                 if (entity.scoreboardTags.contains("SneakyPosesSeat")) {
                     entity.remove()
+                    continue
                 }
                 if (entity.scoreboardTags.contains("SneakyPosesBarrierMarker")) {
                     val loc = entity.location.block.location

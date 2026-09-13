@@ -13,6 +13,38 @@ import java.util.Collections
 
 object PacketManager {
 
+    private const val NPC_TEAM_NAME = "sneakyposes_npc"
+
+    /** Unique 16-char profile name used as the scoreboard team entry for an NPC UUID. */
+    fun npcTeamEntry(npcUuid: UUID): String =
+        npcUuid.toString().replace("-", "").take(16)
+
+    private fun nametagHideTeam(): org.bukkit.scoreboard.Team {
+        val board = Bukkit.getScoreboardManager()!!.mainScoreboard
+        val existing = board.getTeam(NPC_TEAM_NAME)
+        if (existing != null) return existing
+        return board.registerNewTeam(NPC_TEAM_NAME).apply {
+            setOption(
+                org.bukkit.scoreboard.Team.Option.NAME_TAG_VISIBILITY,
+                org.bukkit.scoreboard.Team.OptionStatus.NEVER
+            )
+            setOption(
+                org.bukkit.scoreboard.Team.Option.COLLISION_RULE,
+                org.bukkit.scoreboard.Team.OptionStatus.NEVER
+            )
+            setCanSeeFriendlyInvisibles(false)
+        }
+    }
+
+    fun hideNpcNametag(npcUuid: UUID) {
+        nametagHideTeam().addEntry(npcTeamEntry(npcUuid))
+    }
+
+    fun clearNpcNametag(npcUuid: UUID) {
+        Bukkit.getScoreboardManager()?.mainScoreboard?.getTeam(NPC_TEAM_NAME)
+            ?.removeEntry(npcTeamEntry(npcUuid))
+    }
+
     /**
      * Sends a block change to a player.
      */
@@ -29,40 +61,29 @@ object PacketManager {
             // Get NMS Player
             val craftPlayerClass = Class.forName("${Bukkit.getServer().javaClass.packageName}.entity.CraftPlayer")
             val entityPlayer = craftPlayerClass.getMethod("getHandle").invoke(player)
-            
-            // Create GameProfile
+
             val gameProfileClass = Class.forName("com.mojang.authlib.GameProfile")
             val npcUuid = UUID.randomUUID()
-            
-            var profileName = com.sneakyposes.SneakyPoses.instance.config.getString("sleep.npc-name", "[playerName]")!!
-            profileName = profileName.replace("[playerName]", player.name)
-            
-            if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
-                try {
-                    val papiClass = Class.forName("me.clip.placeholderapi.PlaceholderAPI")
-                    val setPlaceholdersMethod = papiClass.getMethod("setPlaceholders", org.bukkit.OfflinePlayer::class.java, String::class.java)
-                    profileName = setPlaceholdersMethod.invoke(null, player as org.bukkit.OfflinePlayer, profileName) as String
-                } catch (e: Exception) {
-                    // Ignore PAPI reflection errors
-                }
-            }
-            
-            if (profileName.length > 16) {
-                profileName = profileName.substring(0, 16)
-            }
-            
-            val gameProfile = gameProfileClass.getConstructor(UUID::class.java, String::class.java).newInstance(npcUuid, profileName)
-            
-            // Copy properties (skin)
+
+            // Profile name must be unique and non-empty: empty/odd names render as a thin nametag "slice".
+            // Nametag is fully hidden via scoreboard team; skin still comes from copied properties.
+            val profileName = npcTeamEntry(npcUuid)
+
+            // Copy skin properties into an immutable PropertyMap for the NPC profile.
             val getProfileMethod = entityPlayer.javaClass.getMethod("getGameProfile")
             val originalProfile = getProfileMethod.invoke(entityPlayer)
-            val getPropertiesMethod = originalProfile.javaClass.getMethod("getProperties")
-            @Suppress("UNCHECKED_CAST")
-            val originalProperties = getPropertiesMethod.invoke(originalProfile) as com.google.common.collect.Multimap<String, Any>
+            val originalProperties = originalProfile.javaClass.getMethod("properties").invoke(originalProfile)
+            val propertyMapClass = Class.forName("com.mojang.authlib.properties.PropertyMap")
+            val npcProperties = propertyMapClass
+                .getConstructor(com.google.common.collect.Multimap::class.java)
+                .newInstance(originalProperties)
 
-            @Suppress("UNCHECKED_CAST")
-            val newProperties = getPropertiesMethod.invoke(gameProfile) as com.google.common.collect.Multimap<String, Any>
-            newProperties.putAll(originalProperties)
+            val gameProfile = gameProfileClass
+                .getConstructor(UUID::class.java, String::class.java, propertyMapClass)
+                .newInstance(npcUuid, profileName, npcProperties)
+
+            // Hide nametag before any viewer receives spawn packets
+            hideNpcNametag(npcUuid)
 
             // Get Server elements
             val craftServerClass = Class.forName("${Bukkit.getServer().javaClass.packageName}.CraftServer")
@@ -86,7 +107,6 @@ object PacketManager {
             // Set Pose & Location
             val spawnLoc = bedLocation.clone().add(0.0, 0.15, 0.0)
             val entityClass = Class.forName("net.minecraft.world.entity.Entity")
-            // 26.x renamed Entity#moveTo -> Entity#snapTo
             val snapToMethod = entityClass.getMethod(
                 "snapTo",
                 Double::class.javaPrimitiveType,
@@ -97,7 +117,6 @@ object PacketManager {
             )
             snapToMethod.invoke(npcPlayer, spawnLoc.x, spawnLoc.y, spawnLoc.z, spawnLoc.yaw, 0f)
 
-            // Set Pose to Sleeping on the object itself
             val poseClass = Class.forName("net.minecraft.world.entity.Pose")
             val sleepingPose = poseClass.getField("SLEEPING").get(null)
             serverPlayerClass.getMethod("setPose", poseClass).invoke(npcPlayer, sleepingPose)
@@ -119,85 +138,195 @@ object PacketManager {
             val craftPlayerClass = Class.forName("${Bukkit.getServer().javaClass.packageName}.entity.CraftPlayer")
             val getHandleMethod = craftPlayerClass.getMethod("getHandle")
             val connectionField = Class.forName("net.minecraft.server.level.ServerPlayer").getField("connection")
-            val sendMethod = Class.forName("net.minecraft.server.network.ServerCommonPacketListenerImpl").getMethod("send", Class.forName("net.minecraft.network.protocol.Packet"))
-
-            val addActionClass = Class.forName("net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket\$Action")
-            val playerInfoPacketConstructor = Class.forName("net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket").getConstructor(java.util.EnumSet::class.java, java.util.Collection::class.java)
+            val packetClass = Class.forName("net.minecraft.network.protocol.Packet")
+            val sendMethod = Class.forName("net.minecraft.server.network.ServerCommonPacketListenerImpl")
+                .getMethod("send", packetClass)
 
             val viewerHandle = getHandleMethod.invoke(viewer)
             val viewerConn = connectionField.get(viewerHandle)
 
-            // 1. Initial Registration (INFO packet)
-            // Assign viewer's connection to NPC temporarily to avoid NPE during packet construction
-            connectionField.set(npc, viewerConn)
-            
-            val noneOfMethod = java.util.EnumSet::class.java.getMethod("noneOf", Class::class.java)
-            val actions = noneOfMethod.invoke(null, addActionClass) as java.util.EnumSet<*>
-            val addMethod = Class.forName("java.util.Set").getMethod("add", Any::class.java)
-            @Suppress("UNCHECKED_CAST")
-            addMethod.invoke(actions, java.lang.Enum.valueOf(addActionClass as Class<out Enum<*>>, "ADD_PLAYER"))
-            
-            val infoPacket = playerInfoPacketConstructor.newInstance(
-                actions,
-                java.util.Collections.singletonList(npc)
+            // 26.x clients require the full player-info init set (not only ADD_PLAYER).
+            // Build Entry manually so we don't depend on the fake NPC having a real connection.
+            val actionClass = Class.forName(
+                "net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket\$Action"
             )
+            val actions = java.util.EnumSet.noneOf(actionClass as Class<out Enum<*>>)
+            val addAction = Class.forName("java.util.Set").getMethod("add", Any::class.java)
+            listOf(
+                "ADD_PLAYER",
+                "UPDATE_GAME_MODE",
+                "UPDATE_LISTED",
+                "UPDATE_LATENCY",
+                "UPDATE_DISPLAY_NAME",
+                "UPDATE_HAT",
+                "UPDATE_LIST_ORDER"
+            ).forEach { name ->
+                @Suppress("UNCHECKED_CAST")
+                addAction.invoke(actions, java.lang.Enum.valueOf(actionClass as Class<out Enum<*>>, name))
+            }
+
+            val gameProfile = npcClass.getMethod("getGameProfile").invoke(npc)
+            val profileUuid = npcClass.getMethod("getUUID").invoke(npc) as UUID
+            val gameTypeClass = Class.forName("net.minecraft.world.level.GameType")
+            val survival = gameTypeClass.getField("SURVIVAL").get(null)
+            val entryClass = Class.forName(
+                "net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket\$Entry"
+            )
+            val entry = entryClass.getConstructor(
+                UUID::class.java,
+                Class.forName("com.mojang.authlib.GameProfile"),
+                Boolean::class.javaPrimitiveType,
+                Int::class.javaPrimitiveType,
+                gameTypeClass,
+                Class.forName("net.minecraft.network.chat.Component"),
+                Boolean::class.javaPrimitiveType,
+                Int::class.javaPrimitiveType,
+                Class.forName("net.minecraft.network.chat.RemoteChatSession\$Data")
+            ).newInstance(
+                profileUuid,
+                gameProfile,
+                false, // listed = false (keep NPC out of tab list)
+                0,
+                survival,
+                null,
+                true, // showHat
+                0,
+                null // chatSession
+            )
+
+            val infoPacket = Class.forName("net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket")
+                .getConstructor(java.util.EnumSet::class.java, entryClass)
+                .newInstance(actions, entry)
             sendMethod.invoke(viewerConn, infoPacket)
 
-            // 2. Body Spawning
+            // Client-side fake bed used by the sleeping pose metadata
+            val bedLoc = location.clone()
+            bedLoc.y = location.world.minHeight.toDouble()
+            val bedData = Material.RED_BED.createBlockData() as org.bukkit.block.data.type.Bed
+            bedData.facing = PoseFacing.yawToBlockFace(location.yaw)
+            bedData.part = org.bukkit.block.data.type.Bed.Part.HEAD
+            sendBlockChange(viewer, bedLoc, bedData)
+
+            // 2. Body Spawning (delay so the client can apply player-info first)
             val plugin = Bukkit.getPluginManager().getPlugin("SneakyPoses")!!
             Bukkit.getScheduler().runTaskLater(plugin, Runnable {
                 try {
                     val nmsBlockPosClass = Class.forName("net.minecraft.core.BlockPos")
-                    val blockPosConstructor = nmsBlockPosClass.getConstructor(Int::class.java, Int::class.java, Int::class.java)
-                    val spawnPos = blockPosConstructor.newInstance(location.blockX, location.blockY, location.blockZ)
-                    
-                    val bedLoc = location.clone()
-                    bedLoc.y = location.world.minHeight.toDouble()
-                    val nmsBedPos = blockPosConstructor.newInstance(bedLoc.blockX, bedLoc.blockY, bedLoc.blockZ)
-                    
+                    val blockPosConstructor = nmsBlockPosClass.getConstructor(
+                        Int::class.javaPrimitiveType,
+                        Int::class.javaPrimitiveType,
+                        Int::class.javaPrimitiveType
+                    )
+                    val nmsBedPos = blockPosConstructor.newInstance(
+                        bedLoc.blockX,
+                        bedLoc.blockY,
+                        bedLoc.blockZ
+                    )
+
                     val nmsEntityClass = Class.forName("net.minecraft.world.entity.Entity")
-                    val addEntityPacket = Class.forName("net.minecraft.network.protocol.game.ClientboundAddEntityPacket").getConstructor(nmsEntityClass, Int::class.java, nmsBlockPosClass).newInstance(npc, 0, spawnPos)
+                    val entityType = Class.forName("net.minecraft.world.entity.EntityTypes")
+                        .getField("PLAYER")
+                        .get(null)
+                    val vec3Zero = Class.forName("net.minecraft.world.phys.Vec3").getField("ZERO").get(null)
+                    val entityId = npcClass.getMethod("getId").invoke(npc) as Int
+
+                    // Precise spawn coords (avoid the BlockPos ctor, which truncates to block ints)
+                    val addEntityPacket = Class.forName("net.minecraft.network.protocol.game.ClientboundAddEntityPacket")
+                        .getConstructor(
+                            Int::class.javaPrimitiveType,
+                            UUID::class.java,
+                            Double::class.javaPrimitiveType,
+                            Double::class.javaPrimitiveType,
+                            Double::class.javaPrimitiveType,
+                            Float::class.javaPrimitiveType,
+                            Float::class.javaPrimitiveType,
+                            Class.forName("net.minecraft.world.entity.EntityType"),
+                            Int::class.javaPrimitiveType,
+                            Class.forName("net.minecraft.world.phys.Vec3"),
+                            Double::class.javaPrimitiveType
+                        ).newInstance(
+                            entityId,
+                            profileUuid,
+                            location.x,
+                            location.y,
+                            location.z,
+                            location.pitch,
+                            location.yaw,
+                            entityType,
+                            0,
+                            vec3Zero,
+                            location.yaw.toDouble()
+                        )
 
                     val dataWatcher = npcClass.getMethod("getEntityData").invoke(npc)
-                    val setMethod = dataWatcher.javaClass.getMethod("set", Class.forName("net.minecraft.network.syncher.EntityDataAccessor"), Any::class.java)
+                    val setMethod = dataWatcher.javaClass.getMethod(
+                        "set",
+                        Class.forName("net.minecraft.network.syncher.EntityDataAccessor"),
+                        Any::class.java
+                    )
 
-                    // Prefer LivingEntity#setSleepingPos over hardcoded synched-data IDs (they move between versions)
                     Class.forName("net.minecraft.world.entity.LivingEntity")
                         .getMethod("setSleepingPos", nmsBlockPosClass)
                         .invoke(npc, nmsBedPos)
+
+                    val poseClass = Class.forName("net.minecraft.world.entity.Pose")
+                    val sleepingPose = poseClass.getField("SLEEPING").get(null)
+                    nmsEntityClass.getMethod("setPose", poseClass).invoke(npc, sleepingPose)
 
                     val skinAccessor = Class.forName("net.minecraft.world.entity.Avatar")
                         .getField("DATA_PLAYER_MODE_CUSTOMISATION")
                         .get(null)
                     setMethod.invoke(dataWatcher, skinAccessor, 127.toByte())
-                    
-                    val nonDefaultValues = dataWatcher.javaClass.getMethod("getNonDefaultValues").invoke(dataWatcher) as List<*>
-                    val metaPacket = Class.forName("net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket").getConstructor(Int::class.javaPrimitiveType, List::class.java).newInstance(npcClass.getMethod("getId").invoke(npc), nonDefaultValues)
-                    
-                    val rotateHeadPacket = Class.forName("net.minecraft.network.protocol.game.ClientboundRotateHeadPacket").getConstructor(nmsEntityClass, Byte::class.java).newInstance(npc, (location.yaw * 256f / 360f).toInt().toByte())
+
+                    val nonDefaultValues = dataWatcher.javaClass
+                        .getMethod("getNonDefaultValues")
+                        .invoke(dataWatcher) as? List<*> ?: emptyList<Any>()
+                    val metaPacket = Class.forName("net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket")
+                        .getConstructor(Int::class.javaPrimitiveType, List::class.java)
+                        .newInstance(entityId, nonDefaultValues)
+
+                    val rotateHeadPacket = Class.forName("net.minecraft.network.protocol.game.ClientboundRotateHeadPacket")
+                        .getConstructor(nmsEntityClass, Byte::class.javaPrimitiveType)
+                        .newInstance(npc, (location.yaw * 256f / 360f).toInt().toByte())
 
                     val nmsPositionMoveRotationClass = Class.forName("net.minecraft.world.entity.PositionMoveRotation")
-                    val nmsPositionMoveRotation = nmsPositionMoveRotationClass.getMethod("of", nmsEntityClass).invoke(null, npc)
-                    val teleportPacket = Class.forName("net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket").getConstructor(Int::class.java, nmsPositionMoveRotationClass, java.util.Set::class.java, Boolean::class.java).newInstance(npcClass.getMethod("getId").invoke(npc), nmsPositionMoveRotation, java.util.Collections.emptySet<Any>(), false)
+                    val nmsPositionMoveRotation = nmsPositionMoveRotationClass
+                        .getMethod("of", nmsEntityClass)
+                        .invoke(null, npc)
+                    val teleportPacket = Class.forName("net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket")
+                        .getConstructor(
+                            Int::class.javaPrimitiveType,
+                            nmsPositionMoveRotationClass,
+                            java.util.Set::class.java,
+                            Boolean::class.javaPrimitiveType
+                        ).newInstance(
+                            entityId,
+                            nmsPositionMoveRotation,
+                            java.util.Collections.emptySet<Any>(),
+                            false
+                        )
 
                     val currentConn = connectionField.get(getHandleMethod.invoke(viewer))
                     sendMethod.invoke(currentConn, addEntityPacket)
                     sendMethod.invoke(currentConn, metaPacket)
                     sendMethod.invoke(currentConn, rotateHeadPacket)
                     sendMethod.invoke(currentConn, teleportPacket)
-                    
+
                     Bukkit.getScheduler().runTaskLater(plugin, Runnable {
                         try {
                             val doubleCheckConn = connectionField.get(getHandleMethod.invoke(viewer))
                             sendMethod.invoke(doubleCheckConn, teleportPacket)
-                        } catch (e: Exception) {}
+                        } catch (_: Exception) {
+                        }
                     }, 1L)
                 } catch (e: Exception) {
                     Bukkit.getLogger().severe("[SneakyPoses] Error in single-viewer NPC spawn: ${e.message}")
+                    e.printStackTrace()
                 }
             }, 2L)
         } catch (e: Exception) {
             Bukkit.getLogger().severe("[SneakyPoses] Error broadcasting NPC packets to ${viewer.name}: ${e.message}")
+            e.printStackTrace()
         }
     }
 
@@ -226,6 +355,7 @@ object PacketManager {
             try {
                 player.isInvisible = false
                 player.world.players.forEach { it.showPlayer(plugin, player) }
+                clearNpcNametag(npcUuid)
 
                 val craftPlayerClass = Class.forName("${Bukkit.getServer().javaClass.packageName}.entity.CraftPlayer")
                 val removePacketClass = Class.forName("net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket")
@@ -275,18 +405,22 @@ object PacketManager {
     }
 
     /**
-     * Spawns an invisible vehicle for sitting.
+     * Spawns an invisible vehicle for sitting / sleep camera mounting.
+     * Marker armor stands have no hitbox and no visible model (unlike BlockDisplay / Interaction outlines).
      */
     fun spawnSitVehicle(location: Location, player: Player): Entity {
-        val display = location.world.spawn(location, org.bukkit.entity.BlockDisplay::class.java) {
+        return location.world.spawn(location, org.bukkit.entity.ArmorStand::class.java) {
+            it.isVisible = false
+            it.isMarker = true
             it.isInvulnerable = true
             it.isSilent = true
             it.setGravity(false)
-            it.velocity = org.bukkit.util.Vector(0, 0, 0)
+            it.setBasePlate(false)
+            it.setArms(false)
+            it.isCustomNameVisible = false
             it.setRotation(player.location.yaw, 0f)
             it.addScoreboardTag("SneakyPosesSeat")
         }
-        return display
     }
 
     /**

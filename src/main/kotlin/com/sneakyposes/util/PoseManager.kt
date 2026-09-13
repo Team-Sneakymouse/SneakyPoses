@@ -17,7 +17,9 @@ data class PoseData(
     val npcId: Int? = null,
     val npcUuid: UUID? = null,
     val npcEntity: Any? = null,
-    val viewerUuids: MutableSet<UUID> = mutableSetOf()
+    val viewerUuids: MutableSet<UUID> = mutableSetOf(),
+    /** Yaw to restore when leaving sleep (NPC yaw is rotated 180° from this). */
+    val wakeYaw: Float? = null
 )
 
 object PoseManager {

@@ -4,7 +4,6 @@ import com.sneakyposes.SneakyPoses
 import com.sneakyposes.util.*
 import org.bukkit.Location
 import org.bukkit.Material
-import org.bukkit.block.BlockFace
 import org.bukkit.block.data.type.Bed
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
@@ -26,20 +25,9 @@ class SleepCommand : CommandBasePose("sleep") {
         bedLoc.y = location.world.minHeight.toDouble()
 
         val originalYaw = location.yaw
-        val snappedYaw = when {
-            originalYaw in -45.0..45.0 -> 0f      // SOUTH
-            originalYaw in 45.0..135.0 -> 90f     // WEST
-            originalYaw in 135.0..180.0 || originalYaw in -180.0..-135.0 -> 180f // NORTH
-            else -> -90f                           // EAST
-        }
-        val rotatedYaw = (snappedYaw + 180f) % 360f
-
-        val face = when (rotatedYaw) {
-            180f -> BlockFace.NORTH
-            -90f, 270f -> BlockFace.EAST
-            0f -> BlockFace.SOUTH
-            else -> BlockFace.WEST
-        }
+        val snappedYaw = PoseFacing.snapYaw(originalYaw)
+        val rotatedYaw = PoseFacing.normalizeYaw(snappedYaw + 180f)
+        val face = PoseFacing.yawToBlockFace(rotatedYaw)
 
         val bedData = Material.RED_BED.createBlockData() as Bed
         bedData.facing = face
@@ -79,7 +67,8 @@ class SleepCommand : CommandBasePose("sleep") {
             blocks = setOf(bedLoc),
             npcId = npcData.first,
             npcUuid = npcData.second,
-            npcEntity = npcData.third
+            npcEntity = npcData.third,
+            wakeYaw = originalYaw
         )
         PoseManager.setPose(target, pose)
 

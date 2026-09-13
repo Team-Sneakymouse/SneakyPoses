@@ -24,6 +24,8 @@ object PoseListenerCleanup {
 
         if (pose.type == PoseType.SLEEP) {
             val restoreLoc = pose.location.clone()
+            // pose.location uses the NPC's 180°-rotated yaw; wake facing the original direction
+            restoreLoc.yaw = pose.wakeYaw ?: player.location.yaw
             restoreLoc.pitch = player.location.pitch
             player.teleport(restoreLoc)
         }
