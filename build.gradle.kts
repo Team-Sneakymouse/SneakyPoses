@@ -73,6 +73,7 @@ publishing {
                 name.set("SneakyPoses")
                 description.set("Paper plugin for controlling player poses.")
                 url.set("https://github.com/Team-Sneakymouse/SneakyPoses")
+                properties.put("sneakyrp.deployment.type", "paper-plugin")
                 scm {
                     url.set("https://github.com/Team-Sneakymouse/SneakyPoses")
                     connection.set("scm:git:https://github.com/Team-Sneakymouse/SneakyPoses.git")
