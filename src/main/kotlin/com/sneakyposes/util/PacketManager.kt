@@ -1,5 +1,6 @@
 package com.sneakyposes.util
 
+import com.sneakyutils.util.PoseFacing
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.block.data.BlockData

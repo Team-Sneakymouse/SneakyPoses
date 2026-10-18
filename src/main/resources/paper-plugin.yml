@@ -8,6 +8,10 @@ website: https://rawb.tv
 
 dependencies:
   server:
+    SneakyUtils:
+      load: BEFORE
+      required: true
+      join-classpath: true
     PlaceholderAPI:
       load: BEFORE
       required: false
