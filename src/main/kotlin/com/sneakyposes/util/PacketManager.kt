@@ -346,6 +346,7 @@ object PacketManager {
 
     fun removeSleepNPC(player: Player, npcId: Int, npcUuid: UUID, bedLoc: Location? = null) {
         val plugin = Bukkit.getPluginManager().getPlugin("SneakyPoses")!!
+        // Delayed tasks capture the player: re-check enabled/online state before sending packets.
         if (!plugin.isEnabled) {
             // If plugin is disabling, just hide player and return
             player.isInvisible = false

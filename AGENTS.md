@@ -1,11 +1,5 @@
-# Agent instructions (SneakyPoses)
+# Agent instructions
 
-Paper plugin in Team-Sneakymouse / Lords of Minecraft. Follow the shared rules in EmptyPlugin's `AGENTS.md` and the team development policy.
+Resolve shared policy using `.team-policy/pointer.json` (paths relative to this repository). Clone the configured remote into the first candidate if missing; otherwise fetch and fast-forward the tracked branch when safe. Report blocked updates.
 
-## Repo-specific rules
-
-- Every pose (sit vehicle, crawl, sleep NPC) must be torn down by `PoseListenerCleanup.cleanupPose`/`cleanupAll` on quit, death, world change, teleport and disable. Add new exit paths there.
-- SneakyDancing asks about pose state through this plugin by name (see its `WavePreview`). Keep a stable read-only way to tell whether a player is standing.
-- Delayed tasks in `util/PacketManager.kt` capture a player; re-check the player is still online and the plugin enabled (as the `isEnabled` check does) before sending packets.
-- `build_output.txt` is tracked but should not be: remove it and add it to `.gitignore` instead of committing new build logs.
-- Block-sit config and offsets are parsed in `SitClickRules` and `StairSitAnchor`, which have tests; extend them there.
+Before implementing, read the resolved checkout's `README.md` and follow its linked guidance relevant to the task.

@@ -9,6 +9,7 @@ import org.bukkit.entity.Player
 
 /**
  * Shared cleanup logic accessible from both PoseListener and CommandBasePose.
+ * Every pose must end here on quit, death, world change, teleport and disable; add new exit paths here.
  */
 object PoseListenerCleanup {
 

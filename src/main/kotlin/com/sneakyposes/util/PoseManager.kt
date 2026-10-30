@@ -22,6 +22,7 @@ data class PoseData(
     val wakeYaw: Float? = null
 )
 
+// SneakyDancing (WavePreview) reflects on PoseManager.isPosing by name; keep that read-only check stable.
 object PoseManager {
     private val activePoses = mutableMapOf<UUID, PoseData>()
 

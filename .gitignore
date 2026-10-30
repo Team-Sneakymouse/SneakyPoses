@@ -30,4 +30,4 @@ run.bat
 !/web/images/.gitkeep
 
 # Reference codebases
-/references/*
+/references/*build_output.txt
