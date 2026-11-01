@@ -33,6 +33,16 @@ dependencies {
     compileOnly("io.github.team-sneakymouse:sneakyutils:2026.10.18-657d452bd6f4")
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation("com.google.code.gson:gson:2.10.1")
+
+    testImplementation("io.papermc.paper:paper-api:26.2.build.+")
+    testImplementation(platform("org.junit:junit-bom:5.13.4"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("org.mockito:mockito-core:5.23.0")
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 kotlin {

@@ -56,13 +56,21 @@ class SneakyPoses : JavaPlugin() {
         server.pluginManager.registerEvents(SitBlockClickListener(), this)
 
         var syncCounter = 0
-        // Background task for synchronization (Visibility @ 20t, Head Rotation @ 1t)
+        // Synchronization: seat yaw and sleeping head rotation every tick, visibility every 20 ticks.
         server.scheduler.runTaskTimer(this, Runnable {
             syncCounter++
             val checkVisibility = syncCounter % 20 == 0
 
             PoseManager.getAllActivePoses().forEach { (uuid, pose) ->
                 val player = server.getPlayer(uuid) ?: return@forEach
+                if (pose.type == PoseType.SIT) {
+                    // Both /sit and block-click seats follow yaw even while the rider is stationary.
+                    val seat = player.vehicle
+                    if (seat != null && seat.uniqueId in pose.entityUuids) {
+                        seat.setRotation(player.location.yaw, 0f)
+                    }
+                    return@forEach
+                }
                 if (pose.type != PoseType.SLEEP || pose.npcEntity == null) return@forEach
 
                 // 1. Sync Visibility for late-joiners (Every 20 ticks)
