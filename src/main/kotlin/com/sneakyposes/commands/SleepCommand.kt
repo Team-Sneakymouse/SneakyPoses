@@ -17,7 +17,7 @@ class SleepCommand : CommandBasePose("sleep") {
 
     override val poseType = PoseType.SLEEP
 
-    override fun applyPose(sender: CommandSender, target: Player, location: Location) {
+    override fun applyPose(sender: CommandSender, target: Player, location: Location, exact: Boolean) {
         val yOffset = SneakyPoses.instance.config.getDouble("sleep.y-offset", -0.1)
         val cameraYOffset = SneakyPoses.instance.config.getDouble("sleep.camera-y-offset", -0.4)
 
@@ -34,10 +34,13 @@ class SleepCommand : CommandBasePose("sleep") {
         bedData.facing = face
         bedData.part = Bed.Part.HEAD
 
-        // Teleport player to exact Y + offset, centered on the block
+        // Teleport player to exact Y + offset, centered on the block unless an exact spot was given
+        // (furniture beds put two sleepers side by side inside one block)
         val playerLoc = location.clone()
-        playerLoc.x = location.blockX + 0.5
-        playerLoc.z = location.blockZ + 0.5
+        if (!exact) {
+            playerLoc.x = location.blockX + 0.5
+            playerLoc.z = location.blockZ + 0.5
+        }
         playerLoc.y += yOffset
         target.teleport(playerLoc)
 
