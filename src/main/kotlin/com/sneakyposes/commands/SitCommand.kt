@@ -10,7 +10,7 @@ class SitCommand : CommandBasePose("sit") {
 
     override val poseType = PoseType.SIT
 
-    override fun applyPose(sender: CommandSender, target: Player, location: Location) {
+    override fun applyPose(sender: CommandSender, target: Player, location: Location, exact: Boolean) {
         val yOffset = SneakyPoses.instance.config.getDouble("sit.y-offset", -0.5)
         SitPoseApplier.apply(sender, target, location, yOffset)
     }

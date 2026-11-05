@@ -14,7 +14,7 @@ class CrawlCommand : CommandBasePose("crawl") {
 
     override val poseType = PoseType.CRAWL
 
-    override fun applyPose(sender: CommandSender, target: Player, location: Location) {
+    override fun applyPose(sender: CommandSender, target: Player, location: Location, exact: Boolean) {
         CrawlManager.beginCrawl(target, location)
 
         if (sender != target) {

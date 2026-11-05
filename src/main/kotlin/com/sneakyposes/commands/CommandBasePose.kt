@@ -15,7 +15,8 @@ import org.bukkit.entity.Player
  *
  * Rules:
  *  - Slot 0: only `true`, `false`, or `toggle` (omit from a player to mean toggle)
- *  - Slot 1: player name when present; slot 2: `world,x,y,z` when present
+ *  - Slot 1: player name when present; slot 2: `world,x,y,z` or `world,x,y,z,yaw` when present
+ *    (the five-part form is an exact spot: /sleep keeps its x/z and yaw instead of centring on the block)
  *  - Targeting another player requires sneakyposes.others (or console)
  *  - A custom world,x,y,z requires sneakyposes.others (or console)
  *  - Console must supply at least [true|false|toggle] and [playerName]
@@ -31,8 +32,9 @@ abstract class CommandBasePose(name: String) : org.bukkit.command.Command(name) 
     /**
      * Apply the pose to the resolved target at the resolved location.
      * Called only when we have confirmed we want to START the pose.
+     * [exact] is true when the caller gave a five-part `world,x,y,z,yaw` location.
      */
-    abstract fun applyPose(sender: CommandSender, target: Player, location: Location)
+    abstract fun applyPose(sender: CommandSender, target: Player, location: Location, exact: Boolean)
 
     /**
      * The PoseType this command manages — used for toggle detection.
@@ -73,6 +75,7 @@ abstract class CommandBasePose(name: String) : org.bukkit.command.Command(name) 
         val target: Player
         val location: Location
         val explicitLocation: Boolean
+        var exact = false
 
         when {
             remainingArgs.isEmpty() -> {
@@ -113,7 +116,7 @@ abstract class CommandBasePose(name: String) : org.bukkit.command.Command(name) 
                 target = resolved
                 location = CommandUtility.parseLocation(remainingArgs[1])
                     ?: run {
-                        sender.sendMessage("Invalid location format. Use: world,x,y,z")
+                        sender.sendMessage("Invalid location format. Use: world,x,y,z or world,x,y,z,yaw")
                         return true
                     }
                 if (senderIsPlayer && !hasOthers) {
@@ -121,6 +124,7 @@ abstract class CommandBasePose(name: String) : org.bukkit.command.Command(name) 
                     return true
                 }
                 explicitLocation = true
+                exact = CommandUtility.isExactLocation(remainingArgs[1])
             }
             else -> {
                 sender.sendMessage("Too many arguments. Use: /$name [true|false|toggle] [<player>] [world,x,y,z]")
@@ -156,7 +160,7 @@ abstract class CommandBasePose(name: String) : org.bukkit.command.Command(name) 
         }
 
         val applyLocation = if (explicitLocation) location else target.location.clone()
-        applyPose(sender, target, applyLocation)
+        applyPose(sender, target, applyLocation, exact)
         return true
     }
 
