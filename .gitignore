@@ -29,5 +29,5 @@ run.bat
 /web/images/*
 !/web/images/.gitkeep
 
-# Reference codebases
-/references/*build_output.txt
+# Reference codebases (local clones only)
+/references/
