@@ -30,7 +30,7 @@ repositories {
 dependencies {
     compileOnly("io.papermc.paper:paper-api:26.2.build.+")
     compileOnly("me.clip:placeholderapi:2.11.6")
-    compileOnly("io.github.team-sneakymouse:sneakyutils:2026.11.14-2a7f2f2acf0a")
+    compileOnly("io.github.team-sneakymouse:sneakyutils:2026.11.14-01224c9aebe2")
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation("com.google.code.gson:gson:2.10.1")
 
