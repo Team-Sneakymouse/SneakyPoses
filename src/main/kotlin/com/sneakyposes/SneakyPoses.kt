@@ -86,7 +86,10 @@ class SneakyPoses : JavaPlugin() {
                     }
                 }
 
-                // 2. Continuous Head Rotation Sync (Every tick)
+                // 2. Held item and helmet on the NPC, when they change
+                com.sneakyposes.util.NpcGear.tick(player, pose)
+
+                // 3. Continuous Head Rotation Sync (Every tick)
                 com.sneakyposes.util.PacketManager.updateNPCHeadRotation(player, pose.npcEntity, pose.location.yaw.toFloat())
             }
         }, 1L, 1L)

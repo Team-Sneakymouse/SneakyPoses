@@ -1,5 +1,6 @@
 package com.sneakyposes.util
 
+import com.sneakyutils.util.PlayerUtil
 import com.sneakyutils.util.PoseFacing
 import org.bukkit.Location
 import org.bukkit.Material
@@ -313,6 +314,8 @@ object PacketManager {
                     sendMethod.invoke(currentConn, rotateHeadPacket)
                     sendMethod.invoke(currentConn, teleportPacket)
 
+                    NpcGear.sendTo(viewer, posingPlayer, npc)
+
                     Bukkit.getScheduler().runTaskLater(plugin, Runnable {
                         try {
                             val doubleCheckConn = connectionField.get(getHandleMethod.invoke(viewer))
@@ -348,14 +351,14 @@ object PacketManager {
         val plugin = Bukkit.getPluginManager().getPlugin("SneakyPoses")!!
         // Delayed tasks capture the player: re-check enabled/online state before sending packets.
         if (!plugin.isEnabled) {
-            // If plugin is disabling, just hide player and return
-            player.isInvisible = false
+            // If plugin is disabling, just reveal the player and return
+            PlayerUtil.reveal(plugin, player)
             return
         }
         
         Bukkit.getScheduler().runTaskLater(plugin, Runnable {
             try {
-                player.isInvisible = false
+                PlayerUtil.reveal(plugin, player)
                 player.world.players.forEach { it.showPlayer(plugin, player) }
                 clearNpcNametag(npcUuid)
 

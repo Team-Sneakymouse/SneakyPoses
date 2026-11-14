@@ -2,6 +2,7 @@ package com.sneakyposes.commands
 
 import com.sneakyposes.SneakyPoses
 import com.sneakyposes.util.*
+import com.sneakyutils.util.PlayerUtil
 import com.sneakyutils.util.PoseFacing
 import org.bukkit.Location
 import org.bukkit.Material
@@ -54,8 +55,9 @@ class SleepCommand : CommandBasePose("sleep") {
         // Create ghost NPC
         val npcData = PacketManager.spawnSleepNPC(target, npcLoc) ?: return
 
-        // Hide the real player
-        target.isInvisible = true
+        // Hide the real player: invisible, and their gear and riders hidden from everyone, themselves included
+        // (the NPC shows their held item and helmet instead; NpcGear)
+        PlayerUtil.conceal(SneakyPoses.instance, target)
 
         // Offset the mounted camera relative to the body so first-person view clears the NPC
         val vehicleLoc = playerLoc.clone()

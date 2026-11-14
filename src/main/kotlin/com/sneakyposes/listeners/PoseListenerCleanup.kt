@@ -1,9 +1,12 @@
 package com.sneakyposes.listeners
 
+import com.sneakyposes.SneakyPoses
 import com.sneakyposes.util.CrawlManager
+import com.sneakyposes.util.NpcGear
 import com.sneakyposes.util.PacketManager
 import com.sneakyposes.util.PoseManager
 import com.sneakyposes.util.PoseType
+import com.sneakyutils.util.PlayerUtil
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 
@@ -19,9 +22,10 @@ object PoseListenerCleanup {
         if (pose.type == PoseType.CRAWL) {
             CrawlManager.stop(player)
         } else {
-            player.isInvisible = false
+            PlayerUtil.reveal(SneakyPoses.instance, player)
             player.leaveVehicle()
         }
+        NpcGear.forget(player.uniqueId)
 
         if (pose.type == PoseType.SLEEP) {
             val restoreLoc = pose.location.clone()
@@ -62,8 +66,9 @@ object PoseListenerCleanup {
             }
 
             val player = Bukkit.getPlayer(uuid)
+            NpcGear.forget(uuid)
             if (player != null) {
-                player.isInvisible = false
+                PlayerUtil.reveal(SneakyPoses.instance, player)
                 if (pose.type == PoseType.CRAWL) {
                     CrawlManager.clearCrawlPose(player)
                 }
